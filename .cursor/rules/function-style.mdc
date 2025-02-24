@@ -1,0 +1,17 @@
+---
+description: function wring basic rules
+globs: 
+---
+
+# Your rule content
+
+- You can @ files here
+- You can use markdown but dont have to
+
+## Must
+- function文よりもarraw関数を優先して使用する
+
+
+## Should
+- 関数が長くなる（目安：100行以上）場合、可読性のみを観点として関数を独立したファイルに分けても良い
+- 関数はできるだけ純粋であることが望ましい。状態はatomを使って管理する
