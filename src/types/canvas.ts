@@ -1,3 +1,4 @@
+import type { Atom } from "jotai";
 import type { ViewCoord } from "../state/viewState";
 
 /**
@@ -43,7 +44,9 @@ export type CanvasRenderEvent = {
  */
 export type CanvasTouchEvent = {
 	/** タッチ座標（ビュー座標系） */
-	point: { x: number; y: number };
+	pointView: { x: number; y: number };
+	/** タッチ座標（キャンバス座標系） */
+	pointCanvas: { x: number; y: number };
 	/** 元のタッチイベント */
 	event: TouchEvent;
 };
@@ -62,8 +65,11 @@ export type CanvasProps = {
 	 * スクロール・ズーム・回転のジェスチャーを有効にするか？
 	 * デフォルト: true
 	 * 無効にした場合、onTouch*イベントは発火しますが、座標系の変更は行われません。
+	 * "multi-touch-only"にした場合、スクロール・ズーム・回転のジェスチャーは複数タッチのみで発火します。
 	 */
-	enableGuesture?: boolean;
+	enableGuesture?: boolean | "multi-touch-only";
+	/** 再描画のトリガーとなるatom。このatomの更新時にキャンバスが再描画され、onRenderが呼び出されます。 */
+	redrawTrigger: Atom<unknown>;
 	/** キャンバスの描画処理 */
 	onRender?: (e: CanvasRenderEvent) => void;
 	/** シングルタッチ開始時の処理 */
@@ -72,4 +78,6 @@ export type CanvasProps = {
 	onTouchMove?: (e: CanvasTouchEvent) => void;
 	/** シングルタッチ終了時の処理 */
 	onTouchEnd?: (e: CanvasTouchEvent) => void;
+	/** ジェスチャー操作開始時の処理 */
+	onGuestureStart?: (e: CanvasTouchEvent) => void;
 };

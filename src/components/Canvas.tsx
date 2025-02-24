@@ -1,4 +1,4 @@
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FC } from "react";
 import { viewStateAtom, viewDprAtom } from "../state/viewState";
@@ -14,11 +14,14 @@ export const Canvas: FC<CanvasProps> = ({
 	showGrid = true,
 	showGesture = true,
 	enableGuesture = true,
+	redrawTrigger,
 	onRender,
 	onTouchStart,
 	onTouchMove,
 	onTouchEnd,
+	onGuestureStart,
 }) => {
+	useAtomValue(redrawTrigger);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const [dpr] = useAtom(viewDprAtom);
 	const [view, setView] = useAtom(viewStateAtom);
@@ -71,6 +74,23 @@ export const Canvas: FC<CanvasProps> = ({
 		return (Math.atan2(t2.y - t1.y, t2.x - t1.x) * 180) / Math.PI;
 	}, []);
 
+	// ビュー座標からキャンバス座標への変換関数を追加
+	const viewToCanvas = useCallback(
+		(pointView: { x: number; y: number }) => {
+			// 逆変換行列を適用
+			const dx = pointView.x - view.offsetX;
+			const dy = pointView.y - view.offsetY;
+			const rad = (-view.angle * Math.PI) / 180;
+			const cos = Math.cos(rad);
+			const sin = Math.sin(rad);
+			return {
+				x: (dx * cos - dy * sin) / view.scale,
+				y: (dx * sin + dy * cos) / view.scale,
+			};
+		},
+		[view],
+	);
+
 	// タッチ開始時の処理
 	const handleTouchStart = useCallback(
 		(e: TouchEvent) => {
@@ -83,13 +103,15 @@ export const Canvas: FC<CanvasProps> = ({
 
 			// シングルタッチの場合はカスタムハンドラを呼び出し
 			if (newTouches.length === 1) {
+				const pointView = { x: newTouches[0].x, y: newTouches[0].y };
 				onTouchStart?.({
-					point: { x: newTouches[0].x, y: newTouches[0].y },
+					pointView,
+					pointCanvas: viewToCanvas(pointView),
 					event: e,
 				});
 			}
 
-			if (enableGuesture) {
+			if (enableGuesture === true || enableGuesture === "multi-touch-only") {
 				setGesture(() => {
 					// 2点のタッチが検出された場合（1→2の遷移または0→2の遷移）
 					if (newTouches.length === 2) {
@@ -97,7 +119,12 @@ export const Canvas: FC<CanvasProps> = ({
 							x: (newTouches[0].x + newTouches[1].x) / 2,
 							y: (newTouches[0].y + newTouches[1].y) / 2,
 						};
-						debugLog(`handleTouchStart: ${center.x}, ${center.y}`);
+						// ジェスチャー開始イベントを発火
+						onGuestureStart?.({
+							pointView: center,
+							pointCanvas: viewToCanvas(center),
+							event: e,
+						});
 						return {
 							touches: newTouches,
 							center,
@@ -110,7 +137,7 @@ export const Canvas: FC<CanvasProps> = ({
 				setGesture({ touches: newTouches });
 			}
 		},
-		[view, onTouchStart, enableGuesture],
+		[view, onTouchStart, enableGuesture, viewToCanvas, onGuestureStart],
 	);
 
 	// タッチ移動時の処理
@@ -125,19 +152,33 @@ export const Canvas: FC<CanvasProps> = ({
 
 			// シングルタッチの場合はカスタムハンドラを呼び出し
 			if (newTouches.length === 1) {
+				const pointView = { x: newTouches[0].x, y: newTouches[0].y };
 				onTouchMove?.({
-					point: { x: newTouches[0].x, y: newTouches[0].y },
+					pointView,
+					pointCanvas: viewToCanvas(pointView),
 					event: e,
 				});
 			}
 
-			if (enableGuesture) {
+			if (enableGuesture === true || enableGuesture === "multi-touch-only") {
 				setGesture((prev) => {
-					// 単純なドラッグ操作
-					if (prev.touches.length === 1 && newTouches.length === 1) {
-						debugLog("単純なドラッグ操作");
+					// 単純なドラッグ操作（multi-touch-onlyの場合は無効）
+					if (
+						enableGuesture === true &&
+						prev.touches.length === 1 &&
+						newTouches.length === 1
+					) {
 						const dx = (newTouches[0].x - prev.touches[0].x) / 2;
 						const dy = (newTouches[0].y - prev.touches[0].y) / 2;
+						// ジェスチャー開始イベントを発火
+						onGuestureStart?.({
+							pointView: { x: newTouches[0].x, y: newTouches[0].y },
+							pointCanvas: viewToCanvas({
+								x: newTouches[0].x,
+								y: newTouches[0].y,
+							}),
+							event: e,
+						});
 						setView((v) => ({
 							...v,
 							offsetX: v.offsetX + dx,
@@ -200,6 +241,12 @@ export const Canvas: FC<CanvasProps> = ({
 							`center: (${Math.round(newCenter.x)}, ${Math.round(newCenter.y)})`,
 						);
 
+						// ジェスチャー開始イベントを発火
+						onGuestureStart?.({
+							pointView: newCenter,
+							pointCanvas: viewToCanvas(newCenter),
+							event: e,
+						});
 						setView({ ...view, scale, angle, offsetX, offsetY });
 						return { ...prev, touches: newTouches, center: newCenter };
 					}
@@ -210,7 +257,16 @@ export const Canvas: FC<CanvasProps> = ({
 				setGesture({ touches: newTouches });
 			}
 		},
-		[getAngle, getDistance, setView, view, onTouchMove, enableGuesture],
+		[
+			getAngle,
+			getDistance,
+			setView,
+			view,
+			onTouchMove,
+			enableGuesture,
+			viewToCanvas,
+			onGuestureStart,
+		],
 	);
 
 	// タッチ終了時の処理
@@ -225,15 +281,17 @@ export const Canvas: FC<CanvasProps> = ({
 
 			// シングルタッチからタッチなしになった場合はカスタムハンドラを呼び出し
 			if (gesture.touches.length === 1 && newTouches.length === 0) {
+				const pointView = { x: gesture.touches[0].x, y: gesture.touches[0].y };
 				onTouchEnd?.({
-					point: { x: gesture.touches[0].x, y: gesture.touches[0].y },
+					pointView,
+					pointCanvas: viewToCanvas(pointView),
 					event: e,
 				});
 			}
 
 			setGesture({ touches: newTouches });
 		},
-		[gesture.touches, onTouchEnd],
+		[gesture.touches, onTouchEnd, viewToCanvas],
 	);
 
 	// イベントリスナーの設定
@@ -270,7 +328,7 @@ export const Canvas: FC<CanvasProps> = ({
 					top: 0,
 					left: 0,
 					width: "100vw",
-					height: "100vh",
+					height: "100dvh",
 					touchAction: "none", // タッチイベントの既定の動作を無効化
 				}}
 			/>

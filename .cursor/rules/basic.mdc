@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+---
+- nullとundefinedは混在させない
+  - 原則としてundefinedの使用を優先する
+  - ただし、DOMのイベントハンドラと密接に連携する場所など、入力としてnullが使用される文脈ではnullを優先しても構わない
+  
