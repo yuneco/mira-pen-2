@@ -2,28 +2,47 @@ import type { Atom } from "jotai";
 import type { ViewCoord } from "../state/viewState";
 
 /**
- * タッチ操作の座標情報
+ * 基本的なタッチ情報の型
  */
-export type Touch = {
-	/** タッチの識別子 */
-	identifier: number;
-	/** X座標（ピクセル） */
-	x: number;
-	/** Y座標（ピクセル） */
-	y: number;
+export type TouchPoint = {
+	readonly identifier: number;
+	readonly x: number;
+	readonly y: number;
 };
 
 /**
- * ジェスチャー操作の状態
+ * アイドル状態
  */
-export type GestureState = {
-	/** 現在のタッチ情報の配列 */
-	touches: Touch[];
-	/** ピンチ操作の中心座標 */
-	center?: { x: number; y: number };
-	/** ピンチ操作開始時のビュー状態 */
-	initialView?: ViewCoord;
+export type IdleGesture = {
+	readonly type: "idle";
+	readonly touches: readonly [];
 };
+
+/**
+ * シングルタッチ状態
+ */
+export type SingleTouchGesture = {
+	readonly type: "singleTouch";
+	readonly touches: readonly [TouchPoint];
+};
+
+/**
+ * ダブルタッチ（ピンチ）ジェスチャー状態
+ */
+export type DoubleTouchGesture = {
+	readonly type: "doubleTouch";
+	readonly touches: readonly [TouchPoint, TouchPoint];
+	readonly center: { readonly x: number; readonly y: number };
+	readonly initialView: ViewCoord;
+};
+
+/**
+ * 統合型
+ */
+export type GestureState =
+	| IdleGesture
+	| SingleTouchGesture
+	| DoubleTouchGesture;
 
 /**
  * キャンバスの描画イベント

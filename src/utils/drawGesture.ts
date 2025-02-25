@@ -1,5 +1,3 @@
-import type { Touch } from "../types/canvas";
-
 const GESTURE_COLOR = {
 	fill: "rgba(255, 128, 0, 0.5)",
 	stroke: "rgba(255, 128, 0, 0.8)",
@@ -10,26 +8,29 @@ const GESTURE_COLOR = {
 
 /**
  * ジェスチャー操作の視覚的フィードバックを描画
+ * @param ctx - キャンバスの描画コンテキスト
+ * @param touches - タッチ座標の配列
+ * @param center - 中心点の座標
+ * @param dpr - デバイスピクセル比
  */
-export function drawGesture(
+export const drawGesture = (
 	ctx: CanvasRenderingContext2D,
-	touches: Touch[],
+	touches: readonly { x: number; y: number }[],
 	center?: { x: number; y: number },
 	dpr = 1,
-) {
+) => {
+	if (touches.length === 0) return;
+	// タッチポイントの描画
 	ctx.save();
 	ctx.resetTransform();
 	ctx.scale(dpr, dpr);
 
-	// 2点のタッチ間の線を描画
-	if (touches.length === 2) {
-		ctx.beginPath();
-		ctx.moveTo(touches[0].x, touches[0].y);
-		ctx.lineTo(touches[1].x, touches[1].y);
-		ctx.strokeStyle = GESTURE_COLOR.line;
-		ctx.lineWidth = 2;
-		ctx.stroke();
-	}
+	ctx.beginPath();
+	ctx.moveTo(touches[0].x, touches[0].y);
+	ctx.lineTo(touches[touches.length - 1].x, touches[touches.length - 1].y);
+	ctx.strokeStyle = GESTURE_COLOR.line;
+	ctx.lineWidth = 2;
+	ctx.stroke();
 
 	// タッチ座標の描画
 	touches.forEach((touch, index) => {
@@ -62,4 +63,4 @@ export function drawGesture(
 	}
 
 	ctx.restore();
-}
+};

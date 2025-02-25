@@ -2,12 +2,12 @@ import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FC } from "react";
 import { viewStateAtom, viewDprAtom } from "../state/viewState";
-import type { CanvasProps, GestureState, Touch } from "../types/canvas";
+import type { CanvasProps, GestureState } from "../types/canvas";
 import { drawGrid } from "../utils/drawGrid";
 import { GestureDebugger } from "./GestureDebugger";
 import { DebugLogger } from "./DebugLogger";
-import { debugLog } from "../state/debugLogState";
 import { drawGesture } from "../utils/drawGesture";
+import { applyPinchGestureToView } from "../coordinates/gestureTransform";
 
 export const Canvas: FC<CanvasProps> = ({
 	gridSize = 200,
@@ -25,7 +25,10 @@ export const Canvas: FC<CanvasProps> = ({
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const [dpr] = useAtom(viewDprAtom);
 	const [view, setView] = useAtom(viewStateAtom);
-	const [gesture, setGesture] = useState<GestureState>({ touches: [] });
+	const [gesture, setGesture] = useState<GestureState>({
+		type: "idle",
+		touches: [],
+	});
 
 	// キャンバスの描画更新
 	const updateCanvas = useCallback(() => {
@@ -56,23 +59,11 @@ export const Canvas: FC<CanvasProps> = ({
 			drawGesture(
 				ctx,
 				gesture.touches,
-				gesture.touches.length === 2 ? gesture.center : undefined,
+				gesture.type === "doubleTouch" ? gesture.center : undefined,
 				dpr,
 			);
 		}
 	}, [dpr, view, gesture, gridSize, showGrid, showGesture, onRender]);
-
-	// 2点間の距離を計算
-	const getDistance = useCallback((t1: Touch, t2: Touch) => {
-		const dx = t1.x - t2.x;
-		const dy = t1.y - t2.y;
-		return Math.sqrt(dx * dx + dy * dy);
-	}, []);
-
-	// 2点間の角度を計算（度数法）
-	const getAngle = useCallback((t1: Touch, t2: Touch) => {
-		return (Math.atan2(t2.y - t1.y, t2.x - t1.x) * 180) / Math.PI;
-	}, []);
 
 	// ビュー座標からキャンバス座標への変換関数を追加
 	const viewToCanvas = useCallback(
@@ -95,15 +86,15 @@ export const Canvas: FC<CanvasProps> = ({
 	const handleTouchStart = useCallback(
 		(e: TouchEvent) => {
 			e.preventDefault();
-			const newTouches = Array.from(e.touches).map((t) => ({
+			const touchPoints = Array.from(e.touches).map((t) => ({
 				identifier: t.identifier,
 				x: t.clientX,
 				y: t.clientY,
 			}));
 
 			// シングルタッチの場合はカスタムハンドラを呼び出し
-			if (newTouches.length === 1) {
-				const pointView = { x: newTouches[0].x, y: newTouches[0].y };
+			if (touchPoints.length === 1) {
+				const pointView = { x: touchPoints[0].x, y: touchPoints[0].y };
 				onTouchStart?.({
 					pointView,
 					pointCanvas: viewToCanvas(pointView),
@@ -113,28 +104,52 @@ export const Canvas: FC<CanvasProps> = ({
 
 			if (enableGuesture === true || enableGuesture === "multi-touch-only") {
 				setGesture(() => {
-					// 2点のタッチが検出された場合（1→2の遷移または0→2の遷移）
-					if (newTouches.length === 2) {
+					// 2点のタッチが検出された場合
+					if (touchPoints.length >= 2) {
+						// 最初の2点のみを使用
+						const firstTwoTouches = [touchPoints[0], touchPoints[1]] as const;
 						const center = {
-							x: (newTouches[0].x + newTouches[1].x) / 2,
-							y: (newTouches[0].y + newTouches[1].y) / 2,
+							x: (firstTwoTouches[0].x + firstTwoTouches[1].x) / 2,
+							y: (firstTwoTouches[0].y + firstTwoTouches[1].y) / 2,
 						};
+
 						// ジェスチャー開始イベントを発火
 						onGuestureStart?.({
 							pointView: center,
 							pointCanvas: viewToCanvas(center),
 							event: e,
 						});
+
 						return {
-							touches: newTouches,
+							type: "doubleTouch",
+							touches: firstTwoTouches,
 							center,
 							initialView: view,
 						};
 					}
-					return { touches: newTouches };
+					if (touchPoints.length === 1) {
+						return {
+							type: "singleTouch",
+							touches: [touchPoints[0]] as const,
+						};
+					}
+					return { type: "idle", touches: [] as const };
 				});
 			} else {
-				setGesture({ touches: newTouches });
+				// ジェスチャーが無効の場合も適切な型で状態を更新
+				if (touchPoints.length >= 2) {
+					setGesture({
+						type: "singleTouch",
+						touches: [touchPoints[0]] as const,
+					});
+				} else if (touchPoints.length === 1) {
+					setGesture({
+						type: "singleTouch",
+						touches: [touchPoints[0]] as const,
+					});
+				} else {
+					setGesture({ type: "idle", touches: [] as const });
+				}
 			}
 		},
 		[view, onTouchStart, enableGuesture, viewToCanvas, onGuestureStart],
@@ -144,15 +159,15 @@ export const Canvas: FC<CanvasProps> = ({
 	const handleTouchMove = useCallback(
 		(e: TouchEvent) => {
 			e.preventDefault();
-			const newTouches = Array.from(e.touches).map((t) => ({
+			const touchPoints = Array.from(e.touches).map((t) => ({
 				identifier: t.identifier,
 				x: t.clientX,
 				y: t.clientY,
 			}));
 
 			// シングルタッチの場合はカスタムハンドラを呼び出し
-			if (newTouches.length === 1) {
-				const pointView = { x: newTouches[0].x, y: newTouches[0].y };
+			if (touchPoints.length === 1) {
+				const pointView = { x: touchPoints[0].x, y: touchPoints[0].y };
 				onTouchMove?.({
 					pointView,
 					pointCanvas: viewToCanvas(pointView),
@@ -165,122 +180,116 @@ export const Canvas: FC<CanvasProps> = ({
 					// 単純なドラッグ操作（multi-touch-onlyの場合は無効）
 					if (
 						enableGuesture === true &&
-						prev.touches.length === 1 &&
-						newTouches.length === 1
+						prev.type === "singleTouch" &&
+						touchPoints.length === 1
 					) {
-						const dx = (newTouches[0].x - prev.touches[0].x) / 2;
-						const dy = (newTouches[0].y - prev.touches[0].y) / 2;
+						const dx = (touchPoints[0].x - prev.touches[0].x) / 2;
+						const dy = (touchPoints[0].y - prev.touches[0].y) / 2;
+
 						// ジェスチャー開始イベントを発火
 						onGuestureStart?.({
-							pointView: { x: newTouches[0].x, y: newTouches[0].y },
+							pointView: { x: touchPoints[0].x, y: touchPoints[0].y },
 							pointCanvas: viewToCanvas({
-								x: newTouches[0].x,
-								y: newTouches[0].y,
+								x: touchPoints[0].x,
+								y: touchPoints[0].y,
 							}),
 							event: e,
 						});
+
 						setView((v) => ({
 							...v,
 							offsetX: v.offsetX + dx,
 							offsetY: v.offsetY + dy,
 						}));
-						return { touches: newTouches };
+
+						return {
+							type: "singleTouch",
+							touches: [touchPoints[0]] as const,
+						};
 					}
 
 					// ピンチ操作（スケール、回転、ドラッグ）
-					if (
-						prev.touches.length === 2 &&
-						newTouches.length === 2 &&
-						prev.center &&
-						prev.initialView
-					) {
-						// 新しい中心点を計算
-						const newCenter = {
-							x: (newTouches[0].x + newTouches[1].x) / 2,
-							y: (newTouches[0].y + newTouches[1].y) / 2,
-						};
+					if (prev.type === "doubleTouch" && touchPoints.length >= 2) {
+						// 最初の2点のみを使用
+						const firstTwoTouches = [touchPoints[0], touchPoints[1]] as const;
 
-						// 中心点の移動量を計算（ドラッグ操作分）
-						const centerDx = newCenter.x - prev.center.x;
-						const centerDy = newCenter.y - prev.center.y;
-
-						// スケールと角度の計算
-						const oldDist = getDistance(prev.touches[0], prev.touches[1]);
-						const newDist = getDistance(newTouches[0], newTouches[1]);
-						const scaleDiff = newDist / oldDist;
-						const scale = view.scale * scaleDiff;
-
-						const oldAngle = getAngle(prev.touches[0], prev.touches[1]);
-						const newAngle = getAngle(newTouches[0], newTouches[1]);
-						const angleDiff = newAngle - oldAngle;
-						const angle = view.angle + angleDiff;
-
-						// 回転前の中心点のビュー座標
-						const rad = (view.angle * Math.PI) / 180;
-						const cos = Math.cos(rad);
-						const sin = Math.sin(rad);
-						const dx = newCenter.x - view.offsetX - centerDx;
-						const dy = newCenter.y - view.offsetY - centerDy;
-						const currentCenterX = (dx * cos + dy * sin) / view.scale;
-						const currentCenterY = (-dx * sin + dy * cos) / view.scale;
-
-						// 新しい変換後の中心点の位置
-						const newRad = (angle * Math.PI) / 180;
-						const newCos = Math.cos(newRad);
-						const newSin = Math.sin(newRad);
-						const newCenterX = currentCenterX * scale;
-						const newCenterY = currentCenterY * scale;
-						const newDx = newCenterX * newCos - newCenterY * newSin;
-						const newDy = newCenterX * newSin + newCenterY * newCos;
-
-						// 中心点が同じ画面位置になるようにオフセットを計算（ドラッグ分を加算）
-						const offsetX = newCenter.x - newDx;
-						const offsetY = newCenter.y - newDy;
-
-						debugLog(
-							`center: (${Math.round(newCenter.x)}, ${Math.round(newCenter.y)})`,
+						const { view: newView, center } = applyPinchGestureToView(
+							prev,
+							firstTwoTouches,
+							view,
 						);
 
 						// ジェスチャー開始イベントを発火
 						onGuestureStart?.({
-							pointView: newCenter,
-							pointCanvas: viewToCanvas(newCenter),
+							pointView: center,
+							pointCanvas: viewToCanvas(center),
 							event: e,
 						});
-						setView({ ...view, scale, angle, offsetX, offsetY });
-						return { ...prev, touches: newTouches, center: newCenter };
+
+						setView(newView);
+
+						return {
+							type: "doubleTouch",
+							touches: firstTwoTouches,
+							center,
+							initialView: prev.initialView,
+						};
 					}
 
-					return { touches: newTouches };
+					// タッチ数に応じて適切な状態を返す
+					if (touchPoints.length >= 2) {
+						const firstTwoTouches = [touchPoints[0], touchPoints[1]] as const;
+						return {
+							type: "doubleTouch",
+							touches: firstTwoTouches,
+							center: {
+								x: (firstTwoTouches[0].x + firstTwoTouches[1].x) / 2,
+								y: (firstTwoTouches[0].y + firstTwoTouches[1].y) / 2,
+							},
+							initialView: view,
+						};
+					}
+					if (touchPoints.length === 1) {
+						return {
+							type: "singleTouch",
+							touches: [touchPoints[0]] as const,
+						};
+					}
+
+					return { type: "idle", touches: [] as const };
 				});
 			} else {
-				setGesture({ touches: newTouches });
+				// ジェスチャーが無効の場合も適切な型で状態を更新
+				if (touchPoints.length >= 2) {
+					setGesture({
+						type: "singleTouch",
+						touches: [touchPoints[0]] as const,
+					});
+				} else if (touchPoints.length === 1) {
+					setGesture({
+						type: "singleTouch",
+						touches: [touchPoints[0]] as const,
+					});
+				} else {
+					setGesture({ type: "idle", touches: [] as const });
+				}
 			}
 		},
-		[
-			getAngle,
-			getDistance,
-			setView,
-			view,
-			onTouchMove,
-			enableGuesture,
-			viewToCanvas,
-			onGuestureStart,
-		],
+		[setView, view, onTouchMove, enableGuesture, viewToCanvas, onGuestureStart],
 	);
 
 	// タッチ終了時の処理
 	const handleTouchEnd = useCallback(
 		(e: TouchEvent) => {
 			e.preventDefault();
-			const newTouches = Array.from(e.touches).map((t) => ({
+			const touchPoints = Array.from(e.touches).map((t) => ({
 				identifier: t.identifier,
 				x: t.clientX,
 				y: t.clientY,
 			}));
 
 			// シングルタッチからタッチなしになった場合はカスタムハンドラを呼び出し
-			if (gesture.touches.length === 1 && newTouches.length === 0) {
+			if (gesture.type === "singleTouch" && touchPoints.length === 0) {
 				const pointView = { x: gesture.touches[0].x, y: gesture.touches[0].y };
 				onTouchEnd?.({
 					pointView,
@@ -289,9 +298,28 @@ export const Canvas: FC<CanvasProps> = ({
 				});
 			}
 
-			setGesture({ touches: newTouches });
+			// タッチ数に応じて適切な状態を返す
+			if (touchPoints.length >= 2) {
+				const firstTwoTouches = [touchPoints[0], touchPoints[1]] as const;
+				setGesture({
+					type: "doubleTouch",
+					touches: firstTwoTouches,
+					center: {
+						x: (firstTwoTouches[0].x + firstTwoTouches[1].x) / 2,
+						y: (firstTwoTouches[0].y + firstTwoTouches[1].y) / 2,
+					},
+					initialView: view,
+				});
+			} else if (touchPoints.length === 1) {
+				setGesture({
+					type: "singleTouch",
+					touches: [touchPoints[0]] as const,
+				});
+			} else {
+				setGesture({ type: "idle", touches: [] as const });
+			}
 		},
-		[gesture.touches, onTouchEnd, viewToCanvas],
+		[gesture, onTouchEnd, viewToCanvas, view],
 	);
 
 	// イベントリスナーの設定
