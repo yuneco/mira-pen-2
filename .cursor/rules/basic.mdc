@@ -1,12 +1,21 @@
 ---
 description: 
 globs: 
+alwaysApply: false
 ---
 - nullとundefinedは混在させない
   - 原則としてundefinedの使用を優先する
   - ただし、DOMのイベントハンドラと密接に連携する場所など、入力としてnullが使用される文脈ではnullを優先しても構わない
 
+- exportする関数や変数にはJS Docでコメントを書く
+  - @paramsや@returnは内容が自明であれば省略してもよい
+  - 関数の説明は関数の内部処理ではなく、外部仕様に基づいて書くこと
+
 # コード修正時の注意事項
+
+## biomeの基本的なルールに従う
+- 型のimportは`import type`を使う
+- 特段の理由がなければ`forEach`ではなく`for of`を使う
 
 ## リファクタリングを行うときは、修正前後の挙動が等価であることを明示的に確認する
 
