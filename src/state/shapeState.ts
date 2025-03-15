@@ -2,14 +2,16 @@ import { atom } from 'jotai';
 import { createRectShape } from '../shape/createShape';
 import type { Shape } from '../types/shape';
 
+const sampleRect = createRectShape({ x: 100, y: 100, width: 80, height: 50, angle: 0 });
+
 /** 確定済みの図形一覧 */
 const shapesAtom = atom<Shape[]>([
   // サンプルとして1つRectを入れておく
-  createRectShape({ x: 100, y: 100, width: 80, height: 50, angle: 0 }),
+  sampleRect,
 ]);
 
 /** 選択中の図形のID一覧 */
-const selectedIdsAtom = atom<string[]>([]);
+const selectedIdsAtom = atom<string[]>([sampleRect.id]);
 
 /** 全ての図形（確定済み + 入力中） */
 export const allShapesAtom = atom((get) => {
