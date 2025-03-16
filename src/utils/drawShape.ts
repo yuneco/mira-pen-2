@@ -15,16 +15,18 @@ export const drawShapes = (ctx: CanvasRenderingContext2D, shapes: Shape[], view:
     ctx.beginPath();
 
     // シェイプのタイプに応じた描画処理
-    const { x, y, width, height } = shape.rect;
+    const { x, y, width, height, angle } = shape.rect;
+    // 図形の中心点を原点に移動
+    ctx.translate(x + width / 2, y + height / 2);
+    // 図形の回転を適用
+    ctx.rotate((angle * Math.PI) / 180);
+
     if (shape.kind === 'rect') {
-      ctx.rect(x, y, width, height);
+      // 中心が原点になるように調整して描画
+      ctx.rect(-width / 2, -height / 2, width, height);
     } else if (shape.kind === 'oval') {
-      // 楕円の描画
-      const centerX = x + width / 2;
-      const centerY = y + height / 2;
-      const radiusX = width / 2;
-      const radiusY = height / 2;
-      ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
+      // 楕円を原点中心に描画
+      ctx.ellipse(0, 0, width / 2, height / 2, 0, 0, Math.PI * 2);
     }
 
     // スタイルの適用

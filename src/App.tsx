@@ -2,7 +2,6 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { useState } from 'react';
 import './App.css';
 import { Canvas } from './components/Canvas';
-import { PointerDebugger } from './components/PointerDeebugger';
 import { Toolbar } from './components/Toolbar';
 import {
   addStrokePointAction,
@@ -12,12 +11,17 @@ import {
   clearStrokesAction,
   commitStrokeAction,
 } from './state/paintState';
-import { setPointerAction } from './state/pointerState';
+import {
+  dragShapeEndAction,
+  dragShapeStartAction,
+  dragShapeUpdateAction,
+} from './state/selectAction';
 import { allShapesAtom, selectedShapesAtom } from './state/shapeState';
 import type { Tool } from './types/tool';
 import { drawBoundingBox } from './utils/drawBoundingBox';
 import { drawShapes } from './utils/drawShape';
 import { drawStrokes } from './utils/drawStroke';
+
 export const App = () => {
   const [currentTool, setCurrentTool] = useState<Tool>('hand');
   const beginStroke = useSetAtom(beginStrokeAction);
@@ -28,7 +32,9 @@ export const App = () => {
   const strokes = useAtomValue(allStrokesAtom);
   const shapes = useAtomValue(allShapesAtom);
   const selectedShapes = useAtomValue(selectedShapesAtom);
-  const setPointerState = useSetAtom(setPointerAction);
+  const dragShapeStart = useSetAtom(dragShapeStartAction);
+  const dragShapeUpdate = useSetAtom(dragShapeUpdateAction);
+  const dragShapeEnd = useSetAtom(dragShapeEndAction);
 
   return (
     <>
@@ -47,34 +53,28 @@ export const App = () => {
             }
           }}
           onTouchStart={(e) => {
-            setPointerState({
-              phase: 'down',
-              viewPoint: e.pointView,
-              canvasPoint: e.pointCanvas,
-            });
             if (currentTool === 'pen') {
               beginStroke();
               addStrokePoint(e.pointCanvas);
             }
+            if (currentTool === 'select') {
+              dragShapeStart(e.pointView);
+            }
           }}
           onTouchMove={(e) => {
-            setPointerState({
-              phase: 'drag',
-              viewPoint: e.pointView,
-              canvasPoint: e.pointCanvas,
-            });
             if (currentTool === 'pen') {
               addStrokePoint(e.pointCanvas);
             }
+            if (currentTool === 'select') {
+              dragShapeUpdate(e.pointView);
+            }
           }}
           onTouchEnd={(e) => {
-            setPointerState({
-              phase: 'up',
-              viewPoint: e.pointView,
-              canvasPoint: e.pointCanvas,
-            });
             if (currentTool === 'pen') {
               commitStroke();
+            }
+            if (currentTool === 'select') {
+              dragShapeEnd();
             }
           }}
           onGuestureStart={() => {
@@ -87,7 +87,6 @@ export const App = () => {
           onToolChange={setCurrentTool}
           onClickClear={clearStrokes}
         />
-        <PointerDebugger />
       </div>
     </>
   );

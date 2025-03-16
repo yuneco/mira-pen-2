@@ -39,7 +39,7 @@ const calculateHandlePositions = (box: Rect, handleOffset: number): ResizeHandle
  * @param view - 描画座標
  */
 export const drawBoundingBox = (ctx: CanvasRenderingContext2D, shape: Shape, view: ViewCoord) => {
-  const { x, y, width, height } = shape.rect;
+  const { x, y, width, height, angle } = shape.rect;
 
   // スケールに応じた線幅とハンドルサイズの調整
   const scaledStrokeWidth = BOX_STROKE_WIDTH / view.scale;
@@ -53,7 +53,7 @@ export const drawBoundingBox = (ctx: CanvasRenderingContext2D, shape: Shape, vie
     y: y - scaledPadding,
     width: width + scaledPadding * 2,
     height: height + scaledPadding * 2,
-    angle: 0, // バウンディングボックスは回転しない
+    angle: angle,
   };
 
   // 座標変換行列を適用
@@ -62,7 +62,16 @@ export const drawBoundingBox = (ctx: CanvasRenderingContext2D, shape: Shape, vie
   ctx.rotate((view.angle * Math.PI) / 180);
   ctx.scale(view.scale, view.scale);
 
-  // バウンディングボックスを描画
+  // 図形の中心点を計算
+  const centerX = box.x + box.width / 2;
+  const centerY = box.y + box.height / 2;
+
+  // バウンディングボックスを描画（図形の回転を考慮）
+  ctx.save();
+  ctx.translate(centerX, centerY);
+  ctx.rotate((box.angle * Math.PI) / 180);
+  ctx.translate(-centerX, -centerY);
+
   ctx.strokeStyle = BOX_STROKE_COLOR;
   ctx.lineWidth = scaledStrokeWidth;
   ctx.strokeRect(box.x, box.y, box.width, box.height);

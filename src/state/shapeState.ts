@@ -2,16 +2,18 @@ import { atom } from 'jotai';
 import { createRectShape } from '../shape/createShape';
 import type { Shape } from '../types/shape';
 
-const sampleRect = createRectShape({ x: 100, y: 100, width: 80, height: 50, angle: 0 });
+const sampleRect1 = createRectShape({ x: 100, y: 100, width: 70, height: 50, angle: 20 });
+const sampleRect2 = createRectShape({ x: 200, y: 200, width: 100, height: 60, angle: 0 });
 
 /** 確定済みの図形一覧 */
 const shapesAtom = atom<Shape[]>([
   // サンプルとして1つRectを入れておく
-  sampleRect,
+  sampleRect1,
+  sampleRect2,
 ]);
 
 /** 選択中の図形のID一覧 */
-const selectedIdsAtom = atom<string[]>([sampleRect.id]);
+const selectedIdsAtom = atom<string[]>([sampleRect1.id]);
 
 /** 全ての図形（確定済み + 入力中） */
 export const allShapesAtom = atom((get) => {
@@ -23,6 +25,11 @@ export const allShapesAtom = atom((get) => {
 const shapeDictAtom = atom<Map<string, Shape>>((get) => {
   const shapes = get(shapesAtom);
   return new Map(shapes.map((shape) => [shape.id, shape]));
+});
+
+/** IDで図形を取得 */
+export const findShapeByIdAction = atom(undefined, (get, _set, id: string) => {
+  return get(shapeDictAtom).get(id);
 });
 
 /** 図形を追加 */
@@ -58,4 +65,15 @@ export const selectShapeAction = atom(undefined, (get, set, id: string) => {
 /** 図形を選択解除 */
 export const selectShapeNoneAction = atom(undefined, (get, set) => {
   set(selectedIdsAtom, []);
+});
+
+/** 図形を更新 */
+export const updateShapeAction = atom(undefined, (get, set, shape: Shape) => {
+  const shapes = get(shapesAtom);
+  const id = shape.id;
+  const index = shapes.findIndex((shape) => shape.id === id);
+  if (index === -1) return;
+  shapes[index] = shape;
+  // 参照を更新するため新しい配列にとする
+  set(shapesAtom, [...shapes]);
 });
