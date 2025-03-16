@@ -1,3 +1,4 @@
+import { expandRect } from '../coordinates/coordUtils';
 import type { ViewCoord } from '../state/viewState';
 import type { Shape } from '../types/shape';
 
@@ -14,8 +15,9 @@ export const drawShapes = (ctx: CanvasRenderingContext2D, shapes: Shape[], view:
     // シェイプの描画
     ctx.beginPath();
 
-    // シェイプのタイプに応じた描画処理
-    const { x, y, width, height, angle } = shape.rect;
+    // シェイプのタイプに応じた描画処理: 線が領域の外にはみ出さないよう、線幅の半分だけ縮小する
+    const { strokeColor, strokeWidth, fillColor } = shape.style;
+    const { x, y, width, height, angle } = expandRect(shape.rect, -strokeWidth / 2);
     // 図形の中心点を原点に移動
     ctx.translate(x + width / 2, y + height / 2);
     // 図形の回転を適用
@@ -28,9 +30,6 @@ export const drawShapes = (ctx: CanvasRenderingContext2D, shapes: Shape[], view:
       // 楕円を原点中心に描画
       ctx.ellipse(0, 0, width / 2, height / 2, 0, 0, Math.PI * 2);
     }
-
-    // スタイルの適用
-    const { strokeColor, strokeWidth, fillColor } = shape.style;
 
     // 塗りつぶし
     if (fillColor) {

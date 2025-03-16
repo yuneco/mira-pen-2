@@ -10,9 +10,11 @@ import {
   findShapeByIdAction,
   selectShapeAction,
   selectShapeNoneAction,
+  selectedShapeAtom,
   updateShapeAction,
 } from './shapeState';
 
+import { findHandle } from '../components/boundingBox/drawBoundingBox';
 import { viewToCanvas } from '../coordinates/viewAndCanvasCoord';
 import type { Shape } from '../types/shape';
 import { viewStateAtom } from './viewState';
@@ -60,21 +62,6 @@ const hitTest = (shapes: Shape[], canvasPoint: Point): HitTestResult | undefined
   return undefined;
 };
 
-/**
- * 指定された座標に図形が存在するかを確認し、存在する場合はその図形を選択します。
- * 存在しない場合は選択を解除します。
- */
-export const selectShapeAtPointAction = atom(undefined, (get, set, canvasPoint: Point) => {
-  const shapes = get(allShapesAtom);
-  const result = hitTest(shapes, canvasPoint);
-
-  if (result) {
-    set(selectShapeAction, result.shape.id);
-  } else {
-    set(selectShapeNoneAction);
-  }
-});
-
 // ドラッグ処理
 type ShapeDraggingState = Readonly<{
   /** 図形ID */
@@ -105,6 +92,16 @@ export const dragShapeStartAction = atom(undefined, (get, set, viewPoint: Point)
   const view = get(viewStateAtom);
   const canvasPoint = viewToCanvas(viewPoint, view);
 
+  // 選択図形がある場合、選択図形のバウンディングボックスに対してヒットテストを行う
+  const selectedShape = get(selectedShapeAtom).at(0);
+  if (selectedShape) {
+    const result = findHandle(selectedShape, view, canvasPoint);
+    if (result) {
+      console.log('ハンドルがヒットしました', result);
+      return;
+    }
+  }
+  // 全ての図形に対してヒットテストを行う
   const shapes = get(allShapesAtom);
   const result = hitTest(shapes, canvasPoint);
 

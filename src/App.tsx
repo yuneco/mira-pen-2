@@ -3,6 +3,7 @@ import { useState } from 'react';
 import './App.css';
 import { Canvas } from './components/Canvas';
 import { Toolbar } from './components/Toolbar';
+import { drawBoundingBox } from './components/boundingBox/drawBoundingBox';
 import {
   addStrokePointAction,
   allStrokesAtom,
@@ -18,7 +19,6 @@ import {
 } from './state/selectAction';
 import { allShapesAtom, selectedShapesAtom } from './state/shapeState';
 import type { Tool } from './types/tool';
-import { drawBoundingBox } from './utils/drawBoundingBox';
 import { drawShapes } from './utils/drawShape';
 import { drawStrokes } from './utils/drawStroke';
 

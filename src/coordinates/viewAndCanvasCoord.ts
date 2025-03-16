@@ -1,5 +1,5 @@
 import type { ViewCoord } from '../state/viewState';
-import type { Point } from '../types/coord';
+import type { Point, Rect } from '../types/coord';
 
 // ビュー座標からキャンバス座標への変換関数を追加
 export const viewToCanvas = (pointView: Point, view: ViewCoord) => {
@@ -20,4 +20,28 @@ export const canvasToView = (pointCanvas: Point, view: ViewCoord) => {
   const x = pointCanvas.x * view.scale * Math.cos((view.angle * Math.PI) / 180) + view.offsetX;
   const y = pointCanvas.y * view.scale * Math.sin((view.angle * Math.PI) / 180) + view.offsetY;
   return { x, y };
+};
+
+export const viewRectToCanvasRect = (rectView: Rect, view: ViewCoord) => {
+  const { x, y, width, height, angle } = rectView;
+  const rectCanvas = {
+    x: x * view.scale,
+    y: y * view.scale,
+    width: width * view.scale,
+    height: height * view.scale,
+    angle: angle,
+  };
+  return rectCanvas;
+};
+
+export const canvasRectToViewRect = (rectCanvas: Rect, view: ViewCoord) => {
+  const { x, y, width, height, angle } = rectCanvas;
+  const rectView = {
+    x: x / view.scale,
+    y: y / view.scale,
+    width: width / view.scale,
+    height: height / view.scale,
+    angle: angle,
+  };
+  return rectView;
 };

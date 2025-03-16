@@ -32,6 +32,13 @@ export const findShapeByIdAction = atom(undefined, (get, _set, id: string) => {
   return get(shapeDictAtom).get(id);
 });
 
+/** 選択中の図形を取得 */
+export const selectedShapeAtom = atom((get) => {
+  const selectedIds = get(selectedIdsAtom);
+  const shapeMap = get(shapeDictAtom);
+  return selectedIds.map((id) => shapeMap.get(id));
+});
+
 /** 図形を追加 */
 export const addShapeAction = atom(undefined, (get, set, shape: Shape) => {
   // 同一IDの図形が存在する場合は上書き
