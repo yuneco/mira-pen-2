@@ -14,6 +14,14 @@ type BoundingBox = {
       rect: Rect;
     };
   };
+  rotateCircle: {
+    center: Point;
+    radius: number;
+  };
+  rotateHandle: {
+    center: Point;
+    rect: Rect;
+  };
 };
 
 // 設定
@@ -23,6 +31,11 @@ const HANDLE_SIZE = 10;
 const HANDLE_STROKE_WIDTH = 2;
 const HANDLE_STROKE_COLOR = 'blue';
 const HANDLE_FILL_COLOR = 'white';
+const ROTATE_HANDLE_SIZE = 8; // 回転ハンドルのサイズ
+const ROTATE_CIRCLE_TOLERANCE = 5; // 回転円周の当たり判定の許容範囲
+const ROTATE_HANDLE_FILL_COLOR = BOX_STROKE_COLOR; // 回転ハンドルの塗りつぶし色
+const ROTATE_CIRCLE_COLOR = 'powderblue'; // 回転円の色
+const ANGLE_FONT_SIZE = 10; // 角度表示のフォントサイズ
 
 /** バウンディングボックスのパディング＝ボックスの線の内側と図形の矩形の距離 */
 const BOX_PADDING = 4;
@@ -36,8 +49,21 @@ const BOX_PADDING = 4;
 const boundingBoxForShape = (shape: Shape, view: ViewCoord): BoundingBox => {
   const scaledPadding = BOX_PADDING / view.scale;
   const scaledHandleSize = HANDLE_SIZE / view.scale;
+  const scaledRotateHandleSize = ROTATE_HANDLE_SIZE / view.scale;
   const body = expandRect(shape.rect, scaledPadding);
   const corners = cornerPoints(body);
+
+  // 図形の中心点を計算
+  const centerX = body.x + body.width / 2;
+  const centerY = body.y + body.height / 2;
+
+  // 回転円の半径を計算（図形の幅と高さの平均値の半分）
+  const radius = Math.max(body.width, body.height) / Math.SQRT2;
+
+  // 回転ハンドルの位置を計算（円周上の角度位置）
+  const angleRad = (body.angle * Math.PI) / 180;
+  const handleX = centerX + radius * Math.cos(angleRad);
+  const handleY = centerY + radius * Math.sin(angleRad);
 
   const corner2Handle = (corner: Point): BoundingBox['handles'][keyof BoundingBox['handles']] => {
     return {
@@ -54,7 +80,22 @@ const boundingBoxForShape = (shape: Shape, view: ViewCoord): BoundingBox => {
     'bottom-left': corner2Handle(corners[2]),
     'bottom-right': corner2Handle(corners[3]),
   };
-  return { body, handles };
+
+  // 回転円と回転ハンドルの情報を追加
+  const rotateCircle = {
+    center: { x: centerX, y: centerY },
+    radius: radius,
+  };
+
+  const rotateHandle = {
+    center: { x: handleX, y: handleY },
+    rect: {
+      ...rectFromPointAndPadding({ x: handleX, y: handleY }, scaledRotateHandleSize / 2),
+      angle: body.angle,
+    },
+  };
+
+  return { body, handles, rotateCircle, rotateHandle };
 };
 
 /**
@@ -67,6 +108,7 @@ export const drawBoundingBox = (ctx: CanvasRenderingContext2D, shape: Shape, vie
   // スケールに応じた線幅とハンドルサイズの調整
   const scaledStrokeWidth = BOX_STROKE_WIDTH / view.scale;
   const scaledHandleStrokeWidth = HANDLE_STROKE_WIDTH / view.scale;
+  const scaledFontSize = ANGLE_FONT_SIZE / view.scale;
 
   // バウンディングボックスの情報を取得
   const boundingBox = boundingBoxForShape(shape, view);
@@ -92,6 +134,72 @@ export const drawBoundingBox = (ctx: CanvasRenderingContext2D, shape: Shape, vie
   ctx.lineWidth = scaledStrokeWidth;
   ctx.strokeRect(box.x, box.y, box.width, box.height);
   ctx.restore();
+
+  // 回転円を描画
+  ctx.beginPath();
+  ctx.strokeStyle = ROTATE_CIRCLE_COLOR;
+  ctx.lineWidth = scaledStrokeWidth;
+  ctx.arc(
+    boundingBox.rotateCircle.center.x,
+    boundingBox.rotateCircle.center.y,
+    boundingBox.rotateCircle.radius,
+    0,
+    2 * Math.PI
+  );
+  ctx.stroke();
+
+  // 中心から回転ハンドルまでの点線を描画
+  const { center: circleCenter } = boundingBox.rotateCircle;
+  const { center: handleCenter } = boundingBox.rotateHandle;
+
+  ctx.beginPath();
+  ctx.strokeStyle = ROTATE_CIRCLE_COLOR;
+  ctx.setLineDash([3 / view.scale, 3 / view.scale]); // 点線のパターンをスケールに合わせて調整
+  ctx.moveTo(circleCenter.x, circleCenter.y);
+  ctx.lineTo(handleCenter.x, handleCenter.y);
+  ctx.stroke();
+  ctx.setLineDash([]); // 点線をリセット
+
+  // 回転角度を表示
+  ctx.font = `${scaledFontSize}px Arial`;
+  ctx.fillStyle = BOX_STROKE_COLOR;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // 角度をラジアンに変換
+  const angleRad = (box.angle * Math.PI) / 180;
+
+  // 中心から少し離れた位置に角度を表示
+  const angleOffsetDistance = boundingBox.rotateCircle.radius * 0.3; // 中心から30%の位置
+  const angleOffsetX = circleCenter.x + angleOffsetDistance * Math.cos(angleRad);
+  const angleOffsetY = circleCenter.y + angleOffsetDistance * Math.sin(angleRad);
+
+  // テキストの回転を打ち消すために、一時的に座標変換を保存して回転を元に戻す
+  ctx.save();
+  // 図形の回転とviewの回転を打ち消す
+  ctx.translate(circleCenter.x, circleCenter.y);
+  //  ctx.rotate(-(box.angle * Math.PI) / 180);
+  ctx.rotate(-(view.angle * Math.PI) / 180);
+  ctx.translate(-circleCenter.x, -circleCenter.y);
+
+  // 回転を打ち消した状態で、同じ位置にテキストを描画
+  ctx.fillText(`${box.angle.toFixed(2)}°`, angleOffsetX, angleOffsetY);
+
+  // 座標変換を元に戻す
+  ctx.restore();
+
+  // 回転ハンドルを描画（丸に変更）
+  ctx.fillStyle = ROTATE_HANDLE_FILL_COLOR;
+  ctx.strokeStyle = HANDLE_STROKE_COLOR;
+  ctx.lineWidth = scaledHandleStrokeWidth;
+
+  const { center: rotateHandleCenter } = boundingBox.rotateHandle;
+  const rotateHandleRadius = ROTATE_HANDLE_SIZE / (2 * view.scale);
+
+  ctx.beginPath();
+  ctx.arc(rotateHandleCenter.x, rotateHandleCenter.y, rotateHandleRadius, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.stroke();
 
   // ハンドルを描画
   ctx.fillStyle = HANDLE_FILL_COLOR;
@@ -129,13 +237,22 @@ export const findHandle = (
   shape: Shape,
   view: ViewCoord,
   canvasPoint: Point
-): ResizeHandle | undefined => {
+): ResizeHandle | RotateHandle | undefined => {
   // バウンディングボックスの情報を取得
   const boundingBox = boundingBoxForShape(shape, view);
 
-  console.log('boundingBox', boundingBox, canvasPoint);
+  // 回転円周上をチェック
+  const { center: circleCenter, radius } = boundingBox.rotateCircle;
+  const distance = Math.sqrt(
+    (circleCenter.x - canvasPoint.x) ** 2 + (circleCenter.y - canvasPoint.y) ** 2
+  );
 
-  // 各ハンドルをチェック
+  const tolerance = ROTATE_CIRCLE_TOLERANCE / view.scale; // 円周の許容範囲
+  if (Math.abs(distance - radius) <= tolerance) {
+    return 'rotate';
+  }
+
+  // 各リサイズハンドルをチェック
   for (const [handleName, handle] of Object.entries(boundingBox.handles) as [
     ResizeHandle,
     (typeof boundingBox.handles)[ResizeHandle],

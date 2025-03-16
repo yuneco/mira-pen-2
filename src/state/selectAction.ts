@@ -80,7 +80,7 @@ type ShapeDraggingState = Readonly<{
   /** ドラッグ開始時の図形の矩形 */
   startShapeRect: Rect;
   /** ドラッグ中のハンドル */
-  draggingHandle: ResizeHandle | 'body';
+  draggingHandle: ResizeHandle | 'body' | 'rotate';
   /** ドラッグ開始時のビュー座標 */
   startViewPoint: Point;
   /** ドラッグ開始時のキャンバス座標 */
@@ -185,6 +185,46 @@ export const dragShapeUpdateAction = atom(undefined, (get, set, viewPoint: Point
         y: shapeDraggingState.startShapeRect.y + canvasDy,
       },
     };
+    set(updateShapeAction, updatedShape);
+  } else if (shapeDraggingState.draggingHandle === 'rotate') {
+    // 回転処理
+    const { startShapeRect } = shapeDraggingState;
+    const { x, y, width, height, angle: startAngle } = startShapeRect;
+
+    // 図形の中心点を計算
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+
+    // 中心点から見たドラッグ開始時のカーソル位置の角度を計算（ラジアン）
+    const startAngleRad = Math.atan2(startCanvasPoint.y - centerY, startCanvasPoint.x - centerX);
+
+    // 中心点から見た現在のカーソル位置の角度を計算（ラジアン）
+    const currentAngleRad = Math.atan2(
+      currentCanvasPoint.y - centerY,
+      currentCanvasPoint.x - centerX
+    );
+
+    // 角度の差分を計算（ラジアン）
+    const angleDiffRad = currentAngleRad - startAngleRad;
+
+    // ラジアンから度に変換
+    const angleDiffDeg = (angleDiffRad * 180) / Math.PI;
+
+    // 新しい角度を計算（開始時の角度 + 差分）
+    let newAngle = startAngle + angleDiffDeg;
+
+    // 角度を0-360の範囲に正規化
+    newAngle = ((newAngle % 360) + 360) % 360;
+
+    // 更新された図形を設定
+    const updatedShape = {
+      ...shape,
+      rect: {
+        ...startShapeRect,
+        angle: newAngle,
+      },
+    };
+
     set(updateShapeAction, updatedShape);
   } else {
     // ハンドルのドラッグ（リサイズ）
