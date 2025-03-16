@@ -3,7 +3,8 @@ import type { ViewCoord } from '../../state/viewState';
 import type { Point, Rect } from '../../types/coord';
 import type { Shape } from '../../types/shape';
 
-type ResizeHandle = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+export type ResizeHandle = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+export type RotateHandle = 'rotate';
 
 type BoundingBox = {
   body: Rect;

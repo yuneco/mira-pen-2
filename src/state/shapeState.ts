@@ -18,7 +18,7 @@ const selectedIdsAtom = atom<string[]>([sampleRect1.id]);
 /** 全ての図形（確定済み + 入力中） */
 export const allShapesAtom = atom((get) => {
   const shapes = get(shapesAtom);
-  return shapes;
+  return [...shapes];
 });
 
 /** 図形のIDをキーとする図形一覧。内部用 */
