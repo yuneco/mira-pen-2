@@ -56,8 +56,8 @@ export const cornerPoints = (rect: Rect): Point[] => {
   const relativePoints = [
     { x: -halfWidth, y: -halfHeight },
     { x: halfWidth, y: -halfHeight },
-    { x: -halfWidth, y: halfHeight },
     { x: halfWidth, y: halfHeight },
+    { x: -halfWidth, y: halfHeight },
   ];
 
   // 各頂点を回転させて絶対座標に変換

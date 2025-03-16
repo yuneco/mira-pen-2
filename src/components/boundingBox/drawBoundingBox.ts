@@ -77,8 +77,8 @@ const boundingBoxForShape = (shape: Shape, view: ViewCoord): BoundingBox => {
   const handles = {
     'top-left': corner2Handle(corners[0]),
     'top-right': corner2Handle(corners[1]),
-    'bottom-left': corner2Handle(corners[2]),
-    'bottom-right': corner2Handle(corners[3]),
+    'bottom-right': corner2Handle(corners[2]),
+    'bottom-left': corner2Handle(corners[3]),
   };
 
   // 回転円と回転ハンドルの情報を追加

@@ -36,7 +36,7 @@ export const findShapeByIdAction = atom(undefined, (get, _set, id: string) => {
 export const selectedShapeAtom = atom((get) => {
   const selectedIds = get(selectedIdsAtom);
   const shapeMap = get(shapeDictAtom);
-  return selectedIds.map((id) => shapeMap.get(id));
+  return selectedIds.map((id) => shapeMap.get(id)).filter((shape) => shape !== undefined);
 });
 
 /** 図形を追加 */

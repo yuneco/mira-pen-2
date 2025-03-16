@@ -17,6 +17,7 @@ import {
 import { type ResizeHandle, findHandle } from '../components/boundingBox/drawBoundingBox';
 import { viewToCanvas } from '../coordinates/viewAndCanvasCoord';
 import type { Shape } from '../types/shape';
+import { clearSnapAction, initSnapForMoveAction } from './snapState';
 import { viewStateAtom } from './viewState';
 
 // 図形の最小幅/高さ
@@ -147,6 +148,8 @@ export const dragShapeStartAction = atom(undefined, (get, set, viewPoint: Point)
     startLocalPoint: result.localPoint,
     draggingHandle: 'body',
   });
+  // 移動用のスナップを生成
+  set(initSnapForMoveAction);
 });
 
 /**
@@ -426,4 +429,6 @@ export const dragShapeUpdateAction = atom(undefined, (get, set, viewPoint: Point
  */
 export const dragShapeEndAction = atom(undefined, (get, set) => {
   set(shapeDraggingStateAtom, undefined);
+  // スナップをクリア
+  set(clearSnapAction);
 });
