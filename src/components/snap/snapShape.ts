@@ -3,7 +3,7 @@ import type { Point } from '../../types/coord';
 import type { Shape } from '../../types/shape';
 import type { LineSnap, PointSnap, Snap, XSnap, YSnap } from '../../types/snap';
 
-const SNAP_DISTANCE_THRESHOLD = 10;
+const SNAP_DISTANCE_THRESHOLD = 16;
 
 /**
  * スナップの種類の優先度。
@@ -13,9 +13,9 @@ const SNAP_DISTANCE_THRESHOLD = 10;
  */
 const SNAP_KIND_PRIORITY = {
   point: 1.0,
-  x: 1.5,
-  y: 1.5,
-  line: 2.0,
+  x: 10,
+  y: 10,
+  line: 10,
 } as const satisfies Record<Snap['kind'], number>;
 
 const snapPointsOfShape = (shape: Shape) => {
@@ -170,8 +170,6 @@ export const snapShape = (shape: Shape, snaps: Snap[]): Shape | undefined => {
     }
   }
 
-  console.log({ allSnapDistances, anchorPoints });
-
   // 閾値以下の距離を持つスナップだけをフィルタリング
   const filteredSnapDistances = allSnapDistances.filter(
     (snapDistance) => snapDistance.distance <= SNAP_DISTANCE_THRESHOLD
@@ -199,7 +197,7 @@ export const snapShape = (shape: Shape, snaps: Snap[]): Shape | undefined => {
     }
   }
 
-  console.log(minSnapDistance);
+  console.log({ minSnapDistance, filteredSnapDistances });
   // 選択したスナップのdiffを形状の座標に加算
   const snappedShape = {
     ...shape,

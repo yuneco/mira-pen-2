@@ -4,7 +4,7 @@ import type { Snap } from '../../types/snap';
 /** スナップの許容誤差 */
 const SNAP_TOLERANCE = 8;
 /** スナップの色 */
-const SNAP_COLOR = 'gray';
+const SNAP_COLOR = '#cf6b00';
 /** スナップの線幅 */
 const SNAP_LINE_WIDTH = 1;
 /** 点スナップの半径 */
@@ -60,6 +60,7 @@ const drawXSnap = (ctx: CanvasRenderingContext2D, snap: Snap & { kind: 'x' }, vi
   ctx.scale(view.scale, view.scale);
 
   // 線の設定
+  ctx.setLineDash([2 / view.scale, 2 / view.scale]);
   ctx.lineWidth = SNAP_LINE_WIDTH / view.scale;
 
   // キャンバスの高さを取得（スケールで調整）
@@ -93,6 +94,7 @@ const drawYSnap = (ctx: CanvasRenderingContext2D, snap: Snap & { kind: 'y' }, vi
   ctx.scale(view.scale, view.scale);
 
   // 線の設定
+  ctx.setLineDash([2 / view.scale, 2 / view.scale]);
   ctx.lineWidth = SNAP_LINE_WIDTH / view.scale;
 
   // キャンバスの幅を取得（スケールで調整）
@@ -168,6 +170,7 @@ const drawLineSnap = (
   ctx.scale(view.scale, view.scale);
 
   // 線の設定
+  ctx.setLineDash([2 / view.scale, 2 / view.scale]);
   ctx.lineWidth = SNAP_LINE_WIDTH / view.scale;
 
   // 直線の方向ベクトル
