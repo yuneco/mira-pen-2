@@ -6,6 +6,11 @@ export const drawShapes = (ctx: CanvasRenderingContext2D, shapes: Shape[], view:
   if (shapes.length === 0) return;
 
   for (const shape of shapes) {
+    // 幅と高さが0以下の図形は描画しない
+    if (shape.rect.width <= 0 || shape.rect.height <= 0) {
+      continue;
+    }
+
     // 座標変換行列を適用
     ctx.save();
     ctx.translate(view.offsetX, view.offsetY);
@@ -18,6 +23,13 @@ export const drawShapes = (ctx: CanvasRenderingContext2D, shapes: Shape[], view:
     // シェイプのタイプに応じた描画処理: 線が領域の外にはみ出さないよう、線幅の半分だけ縮小する
     const { strokeColor, strokeWidth, fillColor } = shape.style;
     const { x, y, width, height, angle } = expandRect(shape.rect, -strokeWidth / 2);
+
+    // 縮小後の幅と高さが0以下になった場合は描画しない
+    if (width <= 0 || height <= 0) {
+      ctx.restore();
+      continue;
+    }
+
     // 図形の中心点を原点に移動
     ctx.translate(x + width / 2, y + height / 2);
     // 図形の回転を適用

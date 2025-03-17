@@ -105,6 +105,11 @@ const boundingBoxForShape = (shape: Shape, view: ViewCoord): BoundingBox => {
  * @param view - 描画座標
  */
 export const drawBoundingBox = (ctx: CanvasRenderingContext2D, shape: Shape, view: ViewCoord) => {
+  // 幅と高さが0以下の図形はバウンディングボックスを描画しない
+  if (shape.rect.width <= 0 || shape.rect.height <= 0) {
+    return;
+  }
+
   // スケールに応じた線幅とハンドルサイズの調整
   const scaledStrokeWidth = BOX_STROKE_WIDTH / view.scale;
   const scaledHandleStrokeWidth = HANDLE_STROKE_WIDTH / view.scale;
@@ -113,6 +118,11 @@ export const drawBoundingBox = (ctx: CanvasRenderingContext2D, shape: Shape, vie
   // バウンディングボックスの情報を取得
   const boundingBox = boundingBoxForShape(shape, view);
   const box = boundingBox.body;
+
+  // バウンディングボックスの幅と高さが0以下の場合は描画しない
+  if (box.width <= 0 || box.height <= 0) {
+    return;
+  }
 
   // 座標変換行列を適用
   ctx.save();

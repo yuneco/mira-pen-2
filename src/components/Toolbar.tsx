@@ -77,6 +77,96 @@ export const Toolbar: FC<Props> = ({ currentTool, onToolChange, onClickClear }) 
             padding: '8px',
             borderRadius: '4px',
             cursor: 'pointer',
+            background: currentTool === 'create-rect' ? '#e0e0e0' : 'transparent',
+          }}
+        >
+          <input
+            type="radio"
+            name="tool"
+            value="create-rect"
+            checked={currentTool === 'create-rect'}
+            onChange={(e) => e.target.checked && onToolChange('create-rect')}
+            style={{ position: 'absolute', opacity: 0 }}
+          />
+          <svg
+            aria-hidden="true"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          </svg>
+          <span className="sr-only">長方形ツール</span>
+          {currentTool === 'create-rect' && (
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: -2,
+                border: '2px solid #0066ff',
+                borderRadius: '6px',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+        </label>
+        <label
+          style={{
+            position: 'relative',
+            display: 'inline-flex',
+            padding: '8px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            background: currentTool === 'create-oval' ? '#e0e0e0' : 'transparent',
+          }}
+        >
+          <input
+            type="radio"
+            name="tool"
+            value="create-oval"
+            checked={currentTool === 'create-oval'}
+            onChange={(e) => e.target.checked && onToolChange('create-oval')}
+            style={{ position: 'absolute', opacity: 0 }}
+          />
+          <svg
+            aria-hidden="true"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+          </svg>
+          <span className="sr-only">楕円ツール</span>
+          {currentTool === 'create-oval' && (
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: -2,
+                border: '2px solid #0066ff',
+                borderRadius: '6px',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+        </label>
+        <label
+          style={{
+            position: 'relative',
+            display: 'inline-flex',
+            padding: '8px',
+            borderRadius: '4px',
+            cursor: 'pointer',
             background: currentTool === 'pen' ? '#e0e0e0' : 'transparent',
           }}
         >

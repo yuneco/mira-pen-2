@@ -6,6 +6,11 @@ import { Toolbar } from './components/Toolbar';
 import { drawBoundingBox } from './components/boundingBox/drawBoundingBox';
 import { drawSnaps } from './components/snap/drawSnap';
 import {
+  createShapeEndAction,
+  createShapeStartAction,
+  createShapeUpdateAction,
+} from './shape/createShapeAction';
+import {
   addStrokePointAction,
   allStrokesAtom,
   beginStrokeAction,
@@ -18,13 +23,19 @@ import {
   dragShapeStartAction,
   dragShapeUpdateAction,
 } from './state/selectAction';
-import { allShapesAtom, selectedShapesAtom } from './state/shapeState';
+import {
+  allShapesAtom,
+  selectShapeAction,
+  selectShapeNoneAction,
+  selectedShapesAtom,
+} from './state/shapeState';
 import { allSnapsAtom } from './state/snapState';
 import type { Tool } from './types/tool';
 import { drawShapes } from './utils/drawShape';
 import { drawStrokes } from './utils/drawStroke';
+
 export const App = () => {
-  const [currentTool, setCurrentTool] = useState<Tool>('hand');
+  const [currentTool, _setCurrentTool] = useState<Tool>('hand');
   const beginStroke = useSetAtom(beginStrokeAction);
   const addStrokePoint = useSetAtom(addStrokePointAction);
   const commitStroke = useSetAtom(commitStrokeAction);
@@ -37,6 +48,17 @@ export const App = () => {
   const dragShapeStart = useSetAtom(dragShapeStartAction);
   const dragShapeUpdate = useSetAtom(dragShapeUpdateAction);
   const dragShapeEnd = useSetAtom(dragShapeEndAction);
+  const createShapeStart = useSetAtom(createShapeStartAction);
+  const createShapeUpdate = useSetAtom(createShapeUpdateAction);
+  const createShapeEnd = useSetAtom(createShapeEndAction);
+  const selectShape = useSetAtom(selectShapeAction);
+  const selectShapeNone = useSetAtom(selectShapeNoneAction);
+
+  const changeTool = (tool: Tool) => {
+    _setCurrentTool(tool);
+    // ツールを変更したら選択を解除
+    selectShapeNone();
+  };
 
   return (
     <>
@@ -72,6 +94,9 @@ export const App = () => {
             if (currentTool === 'select') {
               dragShapeStart(e.pointView);
             }
+            if (currentTool === 'create-rect' || currentTool === 'create-oval') {
+              createShapeStart({ viewPoint: e.pointView, tool: currentTool });
+            }
           }}
           onTouchMove={(e) => {
             if (currentTool === 'pen') {
@@ -79,6 +104,9 @@ export const App = () => {
             }
             if (currentTool === 'select') {
               dragShapeUpdate(e.pointView);
+            }
+            if (currentTool === 'create-rect' || currentTool === 'create-oval') {
+              createShapeUpdate(e.pointView);
             }
           }}
           onTouchEnd={(e) => {
@@ -88,17 +116,21 @@ export const App = () => {
             if (currentTool === 'select') {
               dragShapeEnd();
             }
+            if (currentTool === 'create-rect' || currentTool === 'create-oval') {
+              // 図形作成を確定し、選択ツールに切り替え、作成した図形を選択
+              const shapeId = createShapeEnd();
+              changeTool('select');
+              if (shapeId) {
+                selectShape(shapeId);
+              }
+            }
           }}
           onGuestureStart={() => {
             // ストローク中にジェスチャー操作が開始されたらキャンセル
             cancelStroke();
           }}
         />
-        <Toolbar
-          currentTool={currentTool}
-          onToolChange={setCurrentTool}
-          onClickClear={clearStrokes}
-        />
+        <Toolbar currentTool={currentTool} onToolChange={changeTool} onClickClear={clearStrokes} />
       </div>
     </>
   );
