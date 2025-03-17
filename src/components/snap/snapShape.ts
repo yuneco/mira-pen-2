@@ -5,6 +5,19 @@ import type { LineSnap, PointSnap, Snap, XSnap, YSnap } from '../../types/snap';
 
 const SNAP_DISTANCE_THRESHOLD = 10;
 
+/**
+ * スナップの種類の優先度。
+ * 閾値内のスナップの中でどのスナップを最近傍とするかを決めるために使用する。
+ * この値と距離の積が最小のスナップを選択する。
+ * （すなわち、値が小さいものほど優先される）
+ */
+const SNAP_KIND_PRIORITY = {
+  point: 1.0,
+  x: 1.5,
+  y: 1.5,
+  line: 2.0,
+} as const satisfies Record<Snap['kind'], number>;
+
 const snapPointsOfShape = (shape: Shape) => {
   return cornerPoints(shape.rect);
 };
@@ -169,11 +182,20 @@ export const snapShape = (shape: Shape, snaps: Snap[]): Shape | undefined => {
     return undefined;
   }
 
-  // フィルタリングされたスナップの中から最小の距離を持つスナップを選択
+  // フィルタリングされたスナップの中から、優先度を考慮して最適なスナップを選択
+  // 距離 × 優先度係数 が最小のスナップを選択する
+  let minWeightedDistance =
+    filteredSnapDistances[0].distance * SNAP_KIND_PRIORITY[filteredSnapDistances[0].snap.kind];
   let minSnapDistance = filteredSnapDistances[0];
+
   for (let i = 1; i < filteredSnapDistances.length; i++) {
-    if (filteredSnapDistances[i].distance < minSnapDistance.distance) {
-      minSnapDistance = filteredSnapDistances[i];
+    const currentSnapDistance = filteredSnapDistances[i];
+    const currentWeightedDistance =
+      currentSnapDistance.distance * SNAP_KIND_PRIORITY[currentSnapDistance.snap.kind];
+
+    if (currentWeightedDistance < minWeightedDistance) {
+      minWeightedDistance = currentWeightedDistance;
+      minSnapDistance = currentSnapDistance;
     }
   }
 
