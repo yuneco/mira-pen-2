@@ -14,8 +14,8 @@ export type ViewCoord = Readonly<{
 export const DEFAULT_VIEW_STATE: ViewCoord = {
   offsetX: 200,
   offsetY: 0,
-  scale: 2,
-  angle: 30,
+  scale: 1,
+  angle: 10,
 };
 
 /**

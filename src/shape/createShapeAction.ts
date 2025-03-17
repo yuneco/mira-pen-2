@@ -10,7 +10,12 @@ import { viewStateAtom } from '../state/viewState';
 import type { Point, Rect } from '../types/coord';
 import type { Shape, ShapeStyle } from '../types/shape';
 import type { Tool } from '../types/tool';
-import { createOvalShape, createRectShape } from './createShape';
+import {
+  DEFAULT_OVAL_STYLE,
+  DEFAULT_RECT_STYLE,
+  createOvalShape,
+  createRectShape,
+} from './createShape';
 
 // 図形の最小幅/高さ（確定時）
 const MIN_SHAPE_SIZE = 10;
@@ -23,13 +28,6 @@ const PREVIEW_STYLE: ShapeStyle = {
   strokeColor: 'rgba(0, 0, 0, 0.5)',
   strokeWidth: 1,
   fillColor: 'rgba(255, 255, 255, 0.3)',
-};
-
-// 確定用のスタイル（createShape.tsのDEFAULT_STYLEと同じ）
-const FINAL_STYLE: ShapeStyle = {
-  strokeColor: '#000',
-  strokeWidth: 1,
-  fillColor: '#fff',
 };
 
 // ドラッグ処理
@@ -197,14 +195,14 @@ export const createShapeEndAction = atom(undefined, (get, set) => {
       id: shapeId,
       kind: 'rect',
       rect: { x, y, width, height, angle },
-      style: FINAL_STYLE,
+      style: DEFAULT_RECT_STYLE,
     };
   } else {
     finalShape = {
       id: shapeId,
       kind: 'oval',
       rect: { x, y, width, height, angle },
-      style: FINAL_STYLE,
+      style: DEFAULT_OVAL_STYLE,
     };
   }
 
