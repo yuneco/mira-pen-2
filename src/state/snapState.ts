@@ -88,10 +88,8 @@ const createBoarderSnaps = (shape: Shape, boarders: Boarder[]): Snap[] => {
 const createXYSnapa = (shape: Shape, boarders: Boarder[]): Snap[] => {
   // 回転が90度単位の場合はx,y軸スナップ、それ以外はlineスナップを生成
   const corners = cornerPoints(shape.rect);
-  const [leftTop, rightTop, rightBottom, leftBottom] = corners;
+  const [leftTop, , rightBottom] = corners;
   const snaps: Snap[] = [];
-
-  const rotated = shape.rect.angle % 90 !== 0;
 
   if (boarders.includes('top')) {
     snaps.push({
@@ -128,6 +126,7 @@ const createCornerSnaps = (shape: Shape): Snap[] => {
   }
   return snaps;
 };
+
 /**
  * 図形移動用のSnapを生成します。
  */
@@ -149,7 +148,11 @@ export const initSnapForMoveAction = atom(undefined, (get, set) => {
   // 選択されていない図形のSnapを生成
   for (const shape of nonSelectedShapes) {
     const rotated = isRotated(shape);
-    const sameAngle = rotated && shape.rect.angle === selectedShape?.rect.angle;
+    const sameAngle =
+      selectedShape &&
+      rotated &&
+      // 角度が90度単位で一致している場合はSnapを生成
+      shape.rect.angle % 90 === selectedShape.rect.angle % 90;
     // 回転していない図形はXY軸スナップを生成
     !rotated && snaps.push(...createXYSnapa(shape, ['top', 'bottom', 'left', 'right']));
     // 回転していて、選択図形と角度が同じ場合は辺スナップを生成

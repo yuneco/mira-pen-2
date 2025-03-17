@@ -18,6 +18,7 @@ import { type ResizeHandle, findHandle } from '../components/boundingBox/drawBou
 import { snapShape } from '../components/snap/snapShape';
 import { viewToCanvas } from '../coordinates/viewAndCanvasCoord';
 import type { Shape } from '../types/shape';
+import { clearAnglesToFitAction, fitAngleAction, initAnglesToFitAction } from './angleFitState';
 import { allSnapsAtom, clearSnapAction, initSnapForMoveAction } from './snapState';
 import { viewStateAtom } from './viewState';
 
@@ -121,6 +122,10 @@ export const dragShapeStartAction = atom(undefined, (get, set, viewPoint: Point)
         startLocalPoint: canvasPointToLocalPoint(selectedShape, canvasPoint),
         draggingHandle: result,
       });
+      // 回転の場合、角度のフィットを初期化
+      if (result === 'rotate') {
+        set(initAnglesToFitAction);
+      }
       return;
     }
   }
@@ -232,9 +237,7 @@ export const dragShapeUpdateAction = atom(undefined, (get, set, viewPoint: Point
       },
     };
 
-    const snappedShape = snapShape(updatedShape, get(allSnapsAtom)) ?? updatedShape;
-
-    set(updateShapeAction, snappedShape);
+    set(fitAngleAction, updatedShape);
   } else {
     // ハンドルのドラッグ（リサイズ）
     const { startShapeRect } = shapeDraggingState;
@@ -439,4 +442,6 @@ export const dragShapeEndAction = atom(undefined, (get, set) => {
   set(shapeDraggingStateAtom, undefined);
   // スナップをクリア
   set(clearSnapAction);
+  // 角度のフィットをクリア
+  set(clearAnglesToFitAction);
 });

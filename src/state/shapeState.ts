@@ -4,14 +4,12 @@ import type { Shape } from '../types/shape';
 
 const sampleRect1 = createRectShape({ x: 100, y: 100, width: 70, height: 50, angle: 20 });
 const sampleRect2 = createRectShape({ x: 200, y: 200, width: 100, height: 60, angle: 0 });
-const sampleRect3 = createRectShape({ x: 60, y: 220, width: 120, height: 80, angle: 20 });
 
 /** 確定済みの図形一覧 */
 const shapesAtom = atom<Shape[]>([
   // サンプルとして1つRectを入れておく
   sampleRect1,
   sampleRect2,
-  sampleRect3,
 ]);
 
 /** 選択中の図形のID一覧 */

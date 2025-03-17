@@ -1,5 +1,5 @@
 import { useAtomValue, useSetAtom } from 'jotai';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import './App.css';
 import { Canvas } from './components/Canvas';
 import { Toolbar } from './components/Toolbar';
@@ -10,6 +10,7 @@ import {
   createShapeStartAction,
   createShapeUpdateAction,
 } from './shape/createShapeAction';
+import { currentFitTargetShapeIdsAtom } from './state/angleFitState';
 import {
   addStrokePointAction,
   allStrokesAtom,
@@ -30,10 +31,10 @@ import {
   selectedShapesAtom,
 } from './state/shapeState';
 import { allSnapsAtom } from './state/snapState';
+import type { CanvasRenderEvent } from './types/canvas';
 import type { Tool } from './types/tool';
 import { drawShapes } from './utils/drawShape';
 import { drawStrokes } from './utils/drawStroke';
-
 export const App = () => {
   const [currentTool, _setCurrentTool] = useState<Tool>('hand');
   const beginStroke = useSetAtom(beginStrokeAction);
@@ -53,12 +54,37 @@ export const App = () => {
   const createShapeEnd = useSetAtom(createShapeEndAction);
   const selectShape = useSetAtom(selectShapeAction);
   const selectShapeNone = useSetAtom(selectShapeNoneAction);
+  const angleFitTargetShapeIds = useAtomValue(currentFitTargetShapeIdsAtom);
 
   const changeTool = (tool: Tool) => {
     _setCurrentTool(tool);
     // ツールを変更したら選択を解除
     selectShapeNone();
   };
+
+  const render = useCallback(
+    (e: CanvasRenderEvent) => {
+      // 全てのストロークを描画
+      e.ctx.save();
+      drawStrokes(e.ctx, strokes, e.view);
+      e.ctx.restore();
+      // 全ての図形を描画
+      e.ctx.save();
+      drawShapes(e.ctx, shapes, e.view, { snapFocusShapeIds: angleFitTargetShapeIds });
+      e.ctx.restore();
+      // バウンディングボックスを描画
+      e.ctx.save();
+      for (const shape of selectedShapes) {
+        drawBoundingBox(e.ctx, shape, e.view);
+      }
+      e.ctx.restore();
+      // スナップを描画
+      e.ctx.save();
+      drawSnaps(e.ctx, snaps, e.view);
+      e.ctx.restore();
+    },
+    [strokes, shapes, selectedShapes, snaps, angleFitTargetShapeIds]
+  );
 
   return (
     <>
@@ -67,24 +93,7 @@ export const App = () => {
           enableGuesture={currentTool === 'hand' ? true : 'multi-touch-only'}
           redrawTrigger={allStrokesAtom}
           onRender={(e) => {
-            // 全てのストロークを描画
-            e.ctx.save();
-            drawStrokes(e.ctx, strokes, e.view);
-            e.ctx.restore();
-            // 全ての図形を描画
-            e.ctx.save();
-            drawShapes(e.ctx, shapes, e.view);
-            e.ctx.restore();
-            // バウンディングボックスを描画
-            e.ctx.save();
-            for (const shape of selectedShapes) {
-              drawBoundingBox(e.ctx, shape, e.view);
-            }
-            e.ctx.restore();
-            // スナップを描画
-            e.ctx.save();
-            drawSnaps(e.ctx, snaps, e.view);
-            e.ctx.restore();
+            render(e);
           }}
           onTouchStart={(e) => {
             if (currentTool === 'pen') {

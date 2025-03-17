@@ -2,8 +2,23 @@ import { expandRect } from '../coordinates/coordUtils';
 import type { ViewCoord } from '../state/viewState';
 import type { Shape } from '../types/shape';
 
-export const drawShapes = (ctx: CanvasRenderingContext2D, shapes: Shape[], view: ViewCoord) => {
+export type DrawOption = {
+  /** フォーカスしている図形のID */
+  snapFocusShapeIds: string[];
+};
+
+const SNAP_FOCUS_STROKE_COLOR = '#0000FF';
+const SNAP_FOCUS_FILL_COLOR = '#0000FF44';
+const SNAP_FOCUS_STROKE_WIDTH = 1;
+export const drawShapes = (
+  ctx: CanvasRenderingContext2D,
+  shapes: Shape[],
+  view: ViewCoord,
+  options: Partial<DrawOption>
+) => {
   if (shapes.length === 0) return;
+
+  const snapFocusShapeIds = options.snapFocusShapeIds ?? [];
 
   for (const shape of shapes) {
     // 幅と高さが0以下の図形は描画しない
@@ -53,6 +68,15 @@ export const drawShapes = (ctx: CanvasRenderingContext2D, shapes: Shape[], view:
     ctx.strokeStyle = strokeColor;
     ctx.lineWidth = strokeWidth;
     ctx.stroke();
+
+    // フォーカスしている図形の場合は枠線を太くする
+    if (snapFocusShapeIds.includes(shape.id)) {
+      ctx.lineWidth = SNAP_FOCUS_STROKE_WIDTH;
+      ctx.strokeStyle = SNAP_FOCUS_STROKE_COLOR;
+      ctx.fillStyle = SNAP_FOCUS_FILL_COLOR;
+      ctx.fill();
+      ctx.stroke();
+    }
 
     ctx.restore();
   }
