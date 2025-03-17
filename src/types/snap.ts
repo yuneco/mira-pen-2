@@ -4,7 +4,7 @@ import type { Point } from './coord';
  * X軸に沿ったスナップ。
  * xの値をvalueに固定する
  */
-type XSnap = {
+export type XSnap = {
   kind: 'x';
   value: number;
 };
@@ -13,7 +13,7 @@ type XSnap = {
  * Y軸に沿ったスナップ。
  * yの値をvalueに固定する
  */
-type YSnap = {
+export type YSnap = {
   kind: 'y';
   value: number;
 };
@@ -23,7 +23,7 @@ type YSnap = {
  * 直線の両端の座標をp1, p2に固定する
  * （線分ではなく、無限に伸びる直線）
  */
-type LineSnap = {
+export type LineSnap = {
   kind: 'line';
   p1: Point;
   p2: Point;
@@ -33,7 +33,7 @@ type LineSnap = {
  * 点に沿ったスナップ。
  * 点の座標をpに固定する
  */
-type PointSnap = {
+export type PointSnap = {
   kind: 'point';
   p: Point;
 };

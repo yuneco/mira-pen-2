@@ -14,6 +14,10 @@ export const mulPoint = (point: Point, scalar: number): Point => {
   return { x: point.x * scalar, y: point.y * scalar };
 };
 
+export const distance = (point1: Point, point2: Point): number => {
+  return Math.sqrt((point1.x - point2.x) ** 2 + (point1.y - point2.y) ** 2);
+};
+
 // rect
 export const rectFromPointAndPadding = (point: Point, padding: number): Rect => {
   return {
