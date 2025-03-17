@@ -1,7 +1,7 @@
 import { cornerPoints, distance } from '../../coordinates/coordUtils';
 import type { Point } from '../../types/coord';
 import type { Shape } from '../../types/shape';
-import type { PointSnap, Snap } from '../../types/snap';
+import type { PointSnap, Snap, XSnap, YSnap } from '../../types/snap';
 
 const SNAP_DISTANCE_THRESHOLD = 10;
 
@@ -35,6 +35,44 @@ const distanceFromPointSnap = (point: Point, snap: PointSnap): SnapDistance => {
   };
 };
 
+const distanceFromXSnap = (point: Point, snap: XSnap): SnapDistance => {
+  // X軸スナップの場合、X座標の差の絶対値が距離
+  const d = Math.abs(snap.value - point.x);
+  return {
+    snap,
+    distance: d,
+    // 最も近い点はX座標がスナップ値で、Y座標は元の点と同じ
+    nearest: {
+      x: snap.value,
+      y: point.y,
+    },
+    // 差分はX方向のみ
+    diff: {
+      x: snap.value - point.x,
+      y: 0,
+    },
+  };
+};
+
+const distanceFromYSnap = (point: Point, snap: YSnap): SnapDistance => {
+  // Y軸スナップの場合、Y座標の差の絶対値が距離
+  const d = Math.abs(snap.value - point.y);
+  return {
+    snap,
+    distance: d,
+    // 最も近い点はY座標がスナップ値で、X座標は元の点と同じ
+    nearest: {
+      x: point.x,
+      y: snap.value,
+    },
+    // 差分はY方向のみ
+    diff: {
+      x: 0,
+      y: snap.value - point.y,
+    },
+  };
+};
+
 /**
  * 形状にスナップを適用する
  * @param shape スナップを適用する図形
@@ -44,15 +82,28 @@ const distanceFromPointSnap = (point: Point, snap: PointSnap): SnapDistance => {
 export const snapShape = (shape: Shape, snaps: Snap[]): Shape | undefined => {
   const anchorPoints = snapPointsOfShape(shape);
 
-  // PointSnapのみをフィルタリング
+  // スナップの種類ごとにフィルタリング
   const pointSnaps = snaps.filter((snap): snap is PointSnap => snap.kind === 'point');
+  const xSnaps = snaps.filter((snap): snap is XSnap => snap.kind === 'x');
+  const ySnaps = snaps.filter((snap): snap is YSnap => snap.kind === 'y');
 
-  // 各アンカーポイントと各PointSnapの距離を計算
+  // 各アンカーポイントと各スナップの距離を計算
   const allSnapDistances: SnapDistance[] = [];
 
   for (const anchorPoint of anchorPoints) {
+    // PointSnapとの距離を計算
     for (const pointSnap of pointSnaps) {
       allSnapDistances.push(distanceFromPointSnap(anchorPoint, pointSnap));
+    }
+
+    // XSnapとの距離を計算
+    for (const xSnap of xSnaps) {
+      allSnapDistances.push(distanceFromXSnap(anchorPoint, xSnap));
+    }
+
+    // YSnapとの距離を計算
+    for (const ySnap of ySnaps) {
+      allSnapDistances.push(distanceFromYSnap(anchorPoint, ySnap));
     }
   }
 
