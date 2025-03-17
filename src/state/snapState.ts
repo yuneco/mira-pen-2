@@ -150,8 +150,11 @@ export const initSnapForMoveAction = atom(undefined, (get, set) => {
   for (const shape of nonSelectedShapes) {
     const rotated = isRotated(shape);
     const sameAngle = rotated && shape.rect.angle === selectedShape?.rect.angle;
-    (!rotated || sameAngle) &&
-      snaps.push(...createXYSnapa(shape, ['top', 'bottom', 'left', 'right']));
+    // 回転していない図形はXY軸スナップを生成
+    !rotated && snaps.push(...createXYSnapa(shape, ['top', 'bottom', 'left', 'right']));
+    // 回転していて、選択図形と角度が同じ場合は辺スナップを生成
+    sameAngle && snaps.push(...createBoarderSnaps(shape, ['top', 'left', 'bottom', 'right']));
+    // 角スナップは全て生成
     snaps.push(...createCornerSnaps(shape));
   }
 
