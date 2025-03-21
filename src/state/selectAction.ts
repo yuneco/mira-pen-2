@@ -14,7 +14,11 @@ import {
   updateShapeAction,
 } from './shapeState';
 
-import { type ResizeHandle, findHandle } from '../components/boundingBox/drawBoundingBox';
+import {
+  type ResizeHandle,
+  findHandle,
+  isResizeHandle,
+} from '../components/boundingBox/drawBoundingBox';
 import { snapShape } from '../components/snap/snapShape';
 import { viewToCanvas } from '../coordinates/viewAndCanvasCoord';
 import type { Shape } from '../types/shape';
@@ -98,6 +102,26 @@ type ShapeDraggingState = Readonly<{
  * それ以外の場所・タイミングで値を変更してはいけません。
  */
 const shapeDraggingStateAtom = atom<ShapeDraggingState | undefined>(undefined);
+
+/**
+ * 現在のドラッグ操作の種類を返します。
+ */
+export const currentDragActionAtom = atom((get) => {
+  const shapeDraggingState = get(shapeDraggingStateAtom);
+  if (!shapeDraggingState) {
+    return undefined;
+  }
+  if (shapeDraggingState.draggingHandle === 'body') {
+    return 'move';
+  }
+  if (shapeDraggingState.draggingHandle === 'rotate') {
+    return 'rotate';
+  }
+  if (isResizeHandle(shapeDraggingState.draggingHandle)) {
+    return 'resize';
+  }
+  return undefined;
+});
 
 /**
  * ドラッグ開始時の処理。

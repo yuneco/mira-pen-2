@@ -1,5 +1,5 @@
 ---
-description: 
+description: 基本的にコーディングルール。新規のコードを描くときはもちろん、リファクタリング時にも参照すること
 globs: 
 alwaysApply: false
 ---

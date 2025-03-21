@@ -1,6 +1,7 @@
 ---
-description: 
+description: Jotaiのatomを定義して利用する際のガイドライン。特にatomの定義を追加・編集する際は必ず参照すること
 globs: 
+alwaysApply: false
 ---
 # Jotaiを使用した状態管理のルール
 

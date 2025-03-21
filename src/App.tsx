@@ -20,6 +20,7 @@ import {
   commitStrokeAction,
 } from './state/paintState';
 import {
+  currentDragActionAtom,
   dragShapeEndAction,
   dragShapeStartAction,
   dragShapeUpdateAction,
@@ -55,6 +56,7 @@ export const App = () => {
   const selectShape = useSetAtom(selectShapeAction);
   const selectShapeNone = useSetAtom(selectShapeNoneAction);
   const angleFitTargetShapeIds = useAtomValue(currentFitTargetShapeIdsAtom);
+  const currentDragAction = useAtomValue(currentDragActionAtom);
 
   const changeTool = (tool: Tool) => {
     _setCurrentTool(tool);
@@ -62,28 +64,39 @@ export const App = () => {
     selectShapeNone();
   };
 
+  // バウンディングボックスを描画するか？
+  // 選択ツールで、かつドラッグ操作でない場合は描画する
+  const shouldDrawBoundingBox = currentTool === 'select' && currentDragAction !== 'move';
+
   const render = useCallback(
     (e: CanvasRenderEvent) => {
       // 全てのストロークを描画
-      e.ctx.save();
       drawStrokes(e.ctx, strokes, e.view);
-      e.ctx.restore();
       // 全ての図形を描画
-      e.ctx.save();
       drawShapes(e.ctx, shapes, e.view, { snapFocusShapeIds: angleFitTargetShapeIds });
-      e.ctx.restore();
       // バウンディングボックスを描画
-      e.ctx.save();
-      for (const shape of selectedShapes) {
-        drawBoundingBox(e.ctx, shape, e.view);
+      if (shouldDrawBoundingBox) {
+        for (const shape of selectedShapes) {
+          drawBoundingBox(
+            e.ctx,
+            shape,
+            e.view,
+            currentDragAction ? [currentDragAction] : ['resize', 'rotate']
+          );
+        }
       }
-      e.ctx.restore();
       // スナップを描画
-      e.ctx.save();
       drawSnaps(e.ctx, snaps, e.view);
-      e.ctx.restore();
     },
-    [strokes, shapes, selectedShapes, snaps, angleFitTargetShapeIds]
+    [
+      strokes,
+      shapes,
+      selectedShapes,
+      snaps,
+      angleFitTargetShapeIds,
+      shouldDrawBoundingBox,
+      currentDragAction,
+    ]
   );
 
   return (
