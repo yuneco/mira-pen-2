@@ -1,0 +1,65 @@
+---
+description: Jotaiのatomを定義して利用する際のガイドライン。特にatomの定義を追加・編集する際は必ず参照すること
+globs: 
+alwaysApply: false
+---
+# Jotaiを使用した状態管理のルール
+
+## 命名規則
+
+1. 基本的なAtomの命名
+   - 通常のAtomは`*Atom`で終わる
+   - 例：`strokesAtom`, `viewStateAtom`
+
+2. アクションAtomの命名
+   - 状態を更新する操作を行うAtomは`*Action`で終わる
+   - 例：`beginStrokeAction`, `commitStrokeAction`
+
+## カプセル化と公開範囲
+
+1. 内部状態の隠蔽
+   - 直接操作されたくない基本的なAtomは`export`しない
+   - `@private`コメントを付けて内部使用であることを明示
+   ```typescript
+   /** @private */
+   const internalAtom = atom(...);
+   ```
+
+2. 公開インターフェース
+   - 外部から利用する状態は派生Atomとして公開
+   - アクションAtomを通じてのみ状態を更新可能に
+   ```typescript
+   // 内部状態
+   const dataAtom = atom(...);
+   
+   // 公開用の派生Atom
+   export const publicDataAtom = atom((get) => {
+     const data = get(dataAtom);
+     return transformData(data);
+   });
+   
+   // 更新用のアクション
+   export const updateDataAction = atom(
+     null,
+     (get, set, newData) => {
+       set(dataAtom, newData);
+     }
+   );
+   ```
+
+## 設計原則
+
+1. 単一責任の原則
+   - 各Atomは明確な1つの役割を持つ
+   - 複数の状態を組み合わせる場合は派生Atomを使用
+
+2. カプセル化による安全性
+   - 内部状態は直接公開しない
+   - アクションを介した更新のみを許可
+   - 不正な状態遷移を防止
+
+3. 使いやすいインターフェース
+   - 外部から見て必要な情報のみを公開
+   - 内部の実装詳細を隠蔽
+   - 例：入力中か確定済みかを意識させない
+
