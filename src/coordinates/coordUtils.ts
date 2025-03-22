@@ -70,3 +70,28 @@ export const cornerPoints = (rect: Rect): Point[] => {
     y: centerY + (point.x * sin + point.y * cos),
   }));
 };
+
+/**
+ * 図形のローカル座標からキャンバス座標に変換する
+ * @param shape 図形
+ * @param localPoint 図形のローカル座標
+ * @returns キャンバス座標
+ */
+export const localPointToCanvasPoint = (shape: Rect, localPoint: Point): Point => {
+  const { x, y, width, height, angle } = shape;
+
+  // 図形の中心点を計算
+  const centerX = x + width / 2;
+  const centerY = y + height / 2;
+
+  // 回転角度をラジアンに変換
+  const rad = (angle * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+
+  // ローカル座標をキャンバス座標に変換
+  const canvasX = centerX + localPoint.x * cos - localPoint.y * sin;
+  const canvasY = centerY + localPoint.x * sin + localPoint.y * cos;
+
+  return { x: canvasX, y: canvasY };
+};

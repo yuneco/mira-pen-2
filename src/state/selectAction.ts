@@ -19,7 +19,7 @@ import {
   findHandle,
   isResizeHandle,
 } from '../components/boundingBox/drawBoundingBox';
-import { snapShape } from '../components/snap/snapShape';
+import { snapResizeHandlePoint, snapShape } from '../components/snap/snapShape';
 import { viewToCanvas } from '../coordinates/viewAndCanvasCoord';
 import type { Shape } from '../types/shape';
 import { clearAnglesToFitAction, fitAngleAction, initAnglesToFitAction } from './angleFitState';
@@ -149,6 +149,9 @@ export const dragShapeStartAction = atom(undefined, (get, set, viewPoint: Point)
       // 回転の場合、角度のフィットを初期化
       if (result === 'rotate') {
         set(initAnglesToFitAction);
+      } else {
+        // 回転でない場合（移動またはリサイズの場合）は移動用のスナップを生成
+        set(initSnapForMoveAction);
       }
       return;
     }
@@ -304,15 +307,26 @@ export const dragShapeUpdateAction = atom(undefined, (get, set, viewPoint: Point
         const newMovingCornerX = movingCorner.x + rotatedDx;
         const newMovingCornerY = movingCorner.y + rotatedDy;
 
-        // 新しい幅と高さを計算
-        newWidth = Math.max(MIN_SHAPE_SIZE, fixedCorner.x - newMovingCornerX);
-        newHeight = Math.max(MIN_SHAPE_SIZE, fixedCorner.y - newMovingCornerY);
+        // スナップ処理を適用
+        const adjustedMovingCorner = snapResizeHandlePoint(
+          { x: newMovingCornerX, y: newMovingCornerY },
+          centerX,
+          centerY,
+          angle,
+          get(allSnapsAtom)
+        );
+        const adjustedNewMovingCornerX = adjustedMovingCorner.x;
+        const adjustedNewMovingCornerY = adjustedMovingCorner.y;
+
+        // 新しい幅と高さを計算（スナップ補正済みの座標を使用）
+        newWidth = Math.max(MIN_SHAPE_SIZE, fixedCorner.x - adjustedNewMovingCornerX);
+        newHeight = Math.max(MIN_SHAPE_SIZE, fixedCorner.y - adjustedNewMovingCornerY);
 
         // 最小サイズに達した場合の調整
         const adjustedMovingCornerX =
-          newWidth === MIN_SHAPE_SIZE ? fixedCorner.x - MIN_SHAPE_SIZE : newMovingCornerX;
+          newWidth === MIN_SHAPE_SIZE ? fixedCorner.x - MIN_SHAPE_SIZE : adjustedNewMovingCornerX;
         const adjustedMovingCornerY =
-          newHeight === MIN_SHAPE_SIZE ? fixedCorner.y - MIN_SHAPE_SIZE : newMovingCornerY;
+          newHeight === MIN_SHAPE_SIZE ? fixedCorner.y - MIN_SHAPE_SIZE : adjustedNewMovingCornerY;
 
         // 新しい中心点を計算
         newCenterX =
@@ -339,15 +353,26 @@ export const dragShapeUpdateAction = atom(undefined, (get, set, viewPoint: Point
         const newMovingCornerX = movingCorner.x + rotatedDx;
         const newMovingCornerY = movingCorner.y + rotatedDy;
 
-        // 新しい幅と高さを計算
-        newWidth = Math.max(MIN_SHAPE_SIZE, newMovingCornerX - fixedCorner.x);
-        newHeight = Math.max(MIN_SHAPE_SIZE, fixedCorner.y - newMovingCornerY);
+        // スナップ処理を適用
+        const adjustedMovingCorner = snapResizeHandlePoint(
+          { x: newMovingCornerX, y: newMovingCornerY },
+          centerX,
+          centerY,
+          angle,
+          get(allSnapsAtom)
+        );
+        const adjustedNewMovingCornerX = adjustedMovingCorner.x;
+        const adjustedNewMovingCornerY = adjustedMovingCorner.y;
+
+        // 新しい幅と高さを計算（スナップ補正済みの座標を使用）
+        newWidth = Math.max(MIN_SHAPE_SIZE, adjustedNewMovingCornerX - fixedCorner.x);
+        newHeight = Math.max(MIN_SHAPE_SIZE, fixedCorner.y - adjustedNewMovingCornerY);
 
         // 最小サイズに達した場合の調整
         const adjustedMovingCornerX =
-          newWidth === MIN_SHAPE_SIZE ? fixedCorner.x + MIN_SHAPE_SIZE : newMovingCornerX;
+          newWidth === MIN_SHAPE_SIZE ? fixedCorner.x + MIN_SHAPE_SIZE : adjustedNewMovingCornerX;
         const adjustedMovingCornerY =
-          newHeight === MIN_SHAPE_SIZE ? fixedCorner.y - MIN_SHAPE_SIZE : newMovingCornerY;
+          newHeight === MIN_SHAPE_SIZE ? fixedCorner.y - MIN_SHAPE_SIZE : adjustedNewMovingCornerY;
 
         // 新しい中心点を計算
         newCenterX =
@@ -374,15 +399,26 @@ export const dragShapeUpdateAction = atom(undefined, (get, set, viewPoint: Point
         const newMovingCornerX = movingCorner.x + rotatedDx;
         const newMovingCornerY = movingCorner.y + rotatedDy;
 
-        // 新しい幅と高さを計算
-        newWidth = Math.max(MIN_SHAPE_SIZE, fixedCorner.x - newMovingCornerX);
-        newHeight = Math.max(MIN_SHAPE_SIZE, newMovingCornerY - fixedCorner.y);
+        // スナップ処理を適用
+        const adjustedMovingCorner = snapResizeHandlePoint(
+          { x: newMovingCornerX, y: newMovingCornerY },
+          centerX,
+          centerY,
+          angle,
+          get(allSnapsAtom)
+        );
+        const adjustedNewMovingCornerX = adjustedMovingCorner.x;
+        const adjustedNewMovingCornerY = adjustedMovingCorner.y;
+
+        // 新しい幅と高さを計算（スナップ補正済みの座標を使用）
+        newWidth = Math.max(MIN_SHAPE_SIZE, fixedCorner.x - adjustedNewMovingCornerX);
+        newHeight = Math.max(MIN_SHAPE_SIZE, adjustedNewMovingCornerY - fixedCorner.y);
 
         // 最小サイズに達した場合の調整
         const adjustedMovingCornerX =
-          newWidth === MIN_SHAPE_SIZE ? fixedCorner.x - MIN_SHAPE_SIZE : newMovingCornerX;
+          newWidth === MIN_SHAPE_SIZE ? fixedCorner.x - MIN_SHAPE_SIZE : adjustedNewMovingCornerX;
         const adjustedMovingCornerY =
-          newHeight === MIN_SHAPE_SIZE ? fixedCorner.y + MIN_SHAPE_SIZE : newMovingCornerY;
+          newHeight === MIN_SHAPE_SIZE ? fixedCorner.y + MIN_SHAPE_SIZE : adjustedNewMovingCornerY;
 
         // 新しい中心点を計算
         newCenterX =
@@ -409,15 +445,26 @@ export const dragShapeUpdateAction = atom(undefined, (get, set, viewPoint: Point
         const newMovingCornerX = movingCorner.x + rotatedDx;
         const newMovingCornerY = movingCorner.y + rotatedDy;
 
-        // 新しい幅と高さを計算
-        newWidth = Math.max(MIN_SHAPE_SIZE, newMovingCornerX - fixedCorner.x);
-        newHeight = Math.max(MIN_SHAPE_SIZE, newMovingCornerY - fixedCorner.y);
+        // スナップ処理を適用
+        const adjustedMovingCorner = snapResizeHandlePoint(
+          { x: newMovingCornerX, y: newMovingCornerY },
+          centerX,
+          centerY,
+          angle,
+          get(allSnapsAtom)
+        );
+        const adjustedNewMovingCornerX = adjustedMovingCorner.x;
+        const adjustedNewMovingCornerY = adjustedMovingCorner.y;
+
+        // 新しい幅と高さを計算（スナップ補正済みの座標を使用）
+        newWidth = Math.max(MIN_SHAPE_SIZE, adjustedNewMovingCornerX - fixedCorner.x);
+        newHeight = Math.max(MIN_SHAPE_SIZE, adjustedNewMovingCornerY - fixedCorner.y);
 
         // 最小サイズに達した場合の調整
         const adjustedMovingCornerX =
-          newWidth === MIN_SHAPE_SIZE ? fixedCorner.x + MIN_SHAPE_SIZE : newMovingCornerX;
+          newWidth === MIN_SHAPE_SIZE ? fixedCorner.x + MIN_SHAPE_SIZE : adjustedNewMovingCornerX;
         const adjustedMovingCornerY =
-          newHeight === MIN_SHAPE_SIZE ? fixedCorner.y + MIN_SHAPE_SIZE : newMovingCornerY;
+          newHeight === MIN_SHAPE_SIZE ? fixedCorner.y + MIN_SHAPE_SIZE : adjustedNewMovingCornerY;
 
         // 新しい中心点を計算
         newCenterX =
@@ -452,9 +499,9 @@ export const dragShapeUpdateAction = atom(undefined, (get, set, viewPoint: Point
       },
     };
 
-    const snappedShape = snapShape(updatedShape, get(allSnapsAtom)) ?? updatedShape;
-
-    set(updateShapeAction, snappedShape);
+    // リサイズまたは回転時は、既にハンドル位置でスナップ処理を行っているため
+    // 図形全体のスナップは不要で直接更新
+    set(updateShapeAction, updatedShape);
   }
 });
 

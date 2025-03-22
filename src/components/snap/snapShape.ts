@@ -131,6 +131,122 @@ const distanceFromLineSnap = (point: Point, snap: LineSnap): SnapDistance => {
 };
 
 /**
+ * リサイズハンドルのスナップ処理を行う。
+ * ローカル座標系のコーナー点をキャンバス座標に変換し、スナップ処理を適用した後、ローカル座標系に戻す。
+ *
+ * @param movingCornerLocal リサイズ中のハンドルのローカル座標
+ * @param centerX 図形の中心X座標
+ * @param centerY 図形の中心Y座標
+ * @param angle 図形の回転角度
+ * @param snaps スナップのリスト
+ * @returns スナップ適用後のローカル座標。スナップしなかった場合は元の座標を返す。
+ */
+export const snapResizeHandlePoint = (
+  movingCornerLocal: Point,
+  centerX: number,
+  centerY: number,
+  angle: number,
+  snaps: Snap[]
+): Point => {
+  // 回転角度をラジアンに変換
+  const rad = (angle * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+
+  // ローカル座標をキャンバス座標に変換してスナップ対象として検証
+  const movingCornerCanvas = {
+    x: centerX + movingCornerLocal.x * cos - movingCornerLocal.y * sin,
+    y: centerY + movingCornerLocal.x * sin + movingCornerLocal.y * cos,
+  };
+
+  // スナップ対象が見つかった場合は位置を修正
+  const snappedCornerCanvas = snapCandidatePoint(movingCornerCanvas, snaps);
+
+  // スナップがない場合は元の座標を返す
+  if (!snappedCornerCanvas) {
+    return movingCornerLocal;
+  }
+
+  // キャンバス座標からローカル座標に戻す
+  // 移動前の中心点と角度を基準に変換
+  const dx = snappedCornerCanvas.x - centerX;
+  const dy = snappedCornerCanvas.y - centerY;
+
+  // 回転を打ち消す逆変換を適用してローカル座標に戻す
+  return {
+    x: dx * cos + dy * sin,
+    y: -dx * sin + dy * cos,
+  };
+};
+
+/**
+ * 単一の点に対してスナップを適用する
+ * @param point スナップを適用する点
+ * @param snaps スナップのリスト
+ * @returns スナップを適用した点。スナップがない場合はundefinedを返す。
+ */
+export const snapCandidatePoint = (point: Point, snaps: Snap[]): Point | undefined => {
+  // スナップの種類ごとにフィルタリング
+  const pointSnaps = snaps.filter((snap): snap is PointSnap => snap.kind === 'point');
+  const xSnaps = snaps.filter((snap): snap is XSnap => snap.kind === 'x');
+  const ySnaps = snaps.filter((snap): snap is YSnap => snap.kind === 'y');
+  const lineSnaps = snaps.filter((snap): snap is LineSnap => snap.kind === 'line');
+
+  // 各スナップの距離を計算
+  const allSnapDistances: SnapDistance[] = [];
+
+  // PointSnapとの距離を計算
+  for (const pointSnap of pointSnaps) {
+    allSnapDistances.push(distanceFromPointSnap(point, pointSnap));
+  }
+
+  // XSnapとの距離を計算
+  for (const xSnap of xSnaps) {
+    allSnapDistances.push(distanceFromXSnap(point, xSnap));
+  }
+
+  // YSnapとの距離を計算
+  for (const ySnap of ySnaps) {
+    allSnapDistances.push(distanceFromYSnap(point, ySnap));
+  }
+
+  // LineSnapとの距離を計算
+  for (const lineSnap of lineSnaps) {
+    allSnapDistances.push(distanceFromLineSnap(point, lineSnap));
+  }
+
+  // 閾値以下の距離を持つスナップだけをフィルタリング
+  const filteredSnapDistances = allSnapDistances.filter(
+    (snapDistance) => snapDistance.distance <= SNAP_DISTANCE_THRESHOLD
+  );
+
+  // フィルタリングされたスナップがない場合はundefinedを返す
+  if (filteredSnapDistances.length === 0) {
+    return undefined;
+  }
+
+  // フィルタリングされたスナップの中から、優先度を考慮して最適なスナップを選択
+  // 距離 × 優先度係数 が最小のスナップを選択する
+  let minWeightedDistance =
+    filteredSnapDistances[0].distance * SNAP_KIND_PRIORITY[filteredSnapDistances[0].snap.kind];
+  let minSnapDistance = filteredSnapDistances[0];
+
+  for (let i = 1; i < filteredSnapDistances.length; i++) {
+    const currentSnapDistance = filteredSnapDistances[i];
+    const currentWeightedDistance =
+      currentSnapDistance.distance * SNAP_KIND_PRIORITY[currentSnapDistance.snap.kind];
+
+    if (currentWeightedDistance < minWeightedDistance) {
+      minWeightedDistance = currentWeightedDistance;
+      minSnapDistance = currentSnapDistance;
+    }
+  }
+
+  // 最近接点にスナップ
+  return minSnapDistance.nearest;
+};
+
+/**
  * 形状にスナップを適用する
  * @param shape スナップを適用する図形
  * @param snaps スナップのリスト
