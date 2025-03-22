@@ -5,11 +5,17 @@ import type { Shape } from '../types/shape';
 export type DrawOption = {
   /** フォーカスしている図形のID */
   snapFocusShapeIds: string[];
+  /** スナップ対象の図形のID */
+  snapTargetShapeIds: string[];
 };
 
 const SNAP_FOCUS_STROKE_COLOR = '#0000FF';
 const SNAP_FOCUS_FILL_COLOR = '#0000FF44';
 const SNAP_FOCUS_STROKE_WIDTH = 1;
+
+const SNAP_TARGET_STROKE_COLOR = '#cf6b00';
+const SNAP_TARGET_STROKE_WIDTH = 2;
+
 export const drawShapes = (
   ctx: CanvasRenderingContext2D,
   shapes: Shape[],
@@ -19,6 +25,7 @@ export const drawShapes = (
   if (shapes.length === 0) return;
 
   const snapFocusShapeIds = options.snapFocusShapeIds ?? [];
+  const snapTargetShapeIds = options.snapTargetShapeIds ?? [];
 
   for (const shape of shapes) {
     // 幅と高さが0以下の図形は描画しない
@@ -75,6 +82,13 @@ export const drawShapes = (
       ctx.strokeStyle = SNAP_FOCUS_STROKE_COLOR;
       ctx.fillStyle = SNAP_FOCUS_FILL_COLOR;
       ctx.fill();
+      ctx.stroke();
+    }
+
+    // スナップ対象の図形の場合は枠線追加
+    if (snapTargetShapeIds.includes(shape.id)) {
+      ctx.lineWidth = SNAP_TARGET_STROKE_WIDTH;
+      ctx.strokeStyle = SNAP_TARGET_STROKE_COLOR;
       ctx.stroke();
     }
 

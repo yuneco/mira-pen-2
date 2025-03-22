@@ -127,63 +127,70 @@ export const currentDragActionAtom = atom((get) => {
  * ドラッグ開始時の処理。
  * 指定のviewPointに図形が存在するかを確認し、存在する場合はその図形を選択し、ドラッグを開始します。
  * 存在しない場合は選択を解除します。この場合、ドラッグは開始されません。
+ * @param viewPoint タッチ座標（ビュー座標系）
+ * @param initSnapTarget スナップ対象の初期モード。'all'=全ての図形、'selected'=選択図形のみ
  */
-export const dragShapeStartAction = atom(undefined, (get, set, viewPoint: Point) => {
-  const view = get(viewStateAtom);
-  const canvasPoint = viewToCanvas(viewPoint, view);
+export const dragShapeStartAction = atom(
+  undefined,
+  (get, set, viewPoint: Point, initSnapTarget: 'selected' | 'all' = 'all') => {
+    const view = get(viewStateAtom);
+    const canvasPoint = viewToCanvas(viewPoint, view);
 
-  // 選択図形がある場合、選択図形のバウンディングボックスに対してヒットテストを行う
-  const selectedShape = get(selectedShapeAtom).at(0);
-  if (selectedShape) {
-    const result = findHandle(selectedShape, view, canvasPoint);
-    if (result) {
-      // ハンドルのドラッグを開始
-      set(shapeDraggingStateAtom, {
-        shapeId: selectedShape.id,
-        startShapeRect: selectedShape.rect,
-        startViewPoint: viewPoint,
-        startCanvasPoint: canvasPoint,
-        startLocalPoint: canvasPointToLocalPoint(selectedShape, canvasPoint),
-        draggingHandle: result,
-      });
-      // 回転の場合、角度のフィットを初期化
-      if (result === 'rotate') {
-        set(initAnglesToFitAction);
-      } else {
-        // 回転でない場合（移動またはリサイズの場合）は移動用のスナップを生成
-        set(initSnapForMoveAction, 'all');
+    // 選択図形がある場合、選択図形のバウンディングボックスに対してヒットテストを行う
+    const selectedShape = get(selectedShapeAtom).at(0);
+    if (selectedShape) {
+      const result = findHandle(selectedShape, view, canvasPoint);
+      if (result) {
+        // ハンドルのドラッグを開始
+        set(shapeDraggingStateAtom, {
+          shapeId: selectedShape.id,
+          startShapeRect: selectedShape.rect,
+          startViewPoint: viewPoint,
+          startCanvasPoint: canvasPoint,
+          startLocalPoint: canvasPointToLocalPoint(selectedShape, canvasPoint),
+          draggingHandle: result,
+        });
+        // 回転の場合、角度のフィットを初期化
+        if (result === 'rotate') {
+          set(initAnglesToFitAction);
+        } else {
+          // 回転でない場合（移動またはリサイズの場合）は移動用のスナップを生成
+          // 指定されたinitSnapTargetを使用する
+          set(initSnapForMoveAction, initSnapTarget);
+        }
+        return;
       }
+    }
+    // 全ての図形に対してヒットテストを行う。その際、選択中の図形がある場合は最優先で判定を行う
+    const shapes = [...get(allShapesAtom)];
+    if (selectedShape) {
+      shapes.push(selectedShape);
+    }
+    const result = hitTest(shapes, canvasPoint);
+
+    // ヒットしなかった場合は選択を解除して終了
+    if (!result) {
+      set(selectShapeNoneAction);
       return;
     }
-  }
-  // 全ての図形に対してヒットテストを行う。その際、選択中の図形がある場合は最優先で判定を行う
-  const shapes = [...get(allShapesAtom)];
-  if (selectedShape) {
-    shapes.push(selectedShape);
-  }
-  const result = hitTest(shapes, canvasPoint);
 
-  // ヒットしなかった場合は選択を解除して終了
-  if (!result) {
-    set(selectShapeNoneAction);
-    return;
+    // ヒットした図形を選択
+    set(selectShapeAction, result.shape.id);
+
+    // ドラッグ中の状態をセット
+    set(shapeDraggingStateAtom, {
+      shapeId: result.shape.id,
+      startShapeRect: result.shape.rect,
+      startViewPoint: viewPoint,
+      startCanvasPoint: canvasPoint,
+      startLocalPoint: result.localPoint,
+      draggingHandle: 'body',
+    });
+    // 移動用のスナップを生成
+    // 指定されたinitSnapTargetを使用する
+    set(initSnapForMoveAction, initSnapTarget);
   }
-
-  // ヒットした図形を選択
-  set(selectShapeAction, result.shape.id);
-
-  // ドラッグ中の状態をセット
-  set(shapeDraggingStateAtom, {
-    shapeId: result.shape.id,
-    startShapeRect: result.shape.rect,
-    startViewPoint: viewPoint,
-    startCanvasPoint: canvasPoint,
-    startLocalPoint: result.localPoint,
-    draggingHandle: 'body',
-  });
-  // 移動用のスナップを生成
-  set(initSnapForMoveAction, 'all');
-});
+);
 
 /**
  * ドラッグ中の座標更新処理。

@@ -232,4 +232,5 @@ export const toggleSnapTargetShapeIdAction = atom(undefined, (get, set, shapeId:
 
 export const clearSnapAction = atom(undefined, (_get, set) => {
   set(allSnapsBaseAtom, []);
+  set(snapTargetShapeIdsAtom, []);
 });

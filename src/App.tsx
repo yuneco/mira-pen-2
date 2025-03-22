@@ -2,6 +2,7 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { useCallback, useState } from 'react';
 import './App.css';
 import { Canvas } from './components/Canvas';
+import { SnapOptionToolbar } from './components/SnapOptionToolbar';
 import { Toolbar } from './components/Toolbar';
 import { drawBoundingBox } from './components/boundingBox/drawBoundingBox';
 import { drawSnaps } from './components/snap/drawSnap';
@@ -31,13 +32,19 @@ import {
   selectShapeNoneAction,
   selectedShapesAtom,
 } from './state/shapeState';
-import { allSnapsAtom } from './state/snapState';
+import { allSnapsAtom, snapTargetShapeIdsAtom } from './state/snapState';
+import { toggleSnapTargetOnMultiTouchAction } from './state/snapToggleAction';
 import type { CanvasRenderEvent } from './types/canvas';
+import type { Point } from './types/coord';
 import type { Tool } from './types/tool';
 import { drawShapes } from './utils/drawShape';
 import { drawStrokes } from './utils/drawStroke';
+
 export const App = () => {
   const [currentTool, _setCurrentTool] = useState<Tool>('hand');
+  // スナップオプションの状態: true=全ての図形にスナップ, false=選択した図形のみスナップ
+  const [snapToAll, setSnapToAll] = useState<boolean>(true);
+
   const beginStroke = useSetAtom(beginStrokeAction);
   const addStrokePoint = useSetAtom(addStrokePointAction);
   const commitStroke = useSetAtom(commitStrokeAction);
@@ -56,7 +63,9 @@ export const App = () => {
   const selectShape = useSetAtom(selectShapeAction);
   const selectShapeNone = useSetAtom(selectShapeNoneAction);
   const angleFitTargetShapeIds = useAtomValue(currentFitTargetShapeIdsAtom);
+  const snapTargetShapeIds = useAtomValue(snapTargetShapeIdsAtom);
   const currentDragAction = useAtomValue(currentDragActionAtom);
+  const toggleSnapTargetOnMultiTouch = useSetAtom(toggleSnapTargetOnMultiTouchAction);
 
   const changeTool = (tool: Tool) => {
     _setCurrentTool(tool);
@@ -73,7 +82,10 @@ export const App = () => {
       // 全てのストロークを描画
       drawStrokes(e.ctx, strokes, e.view);
       // 全ての図形を描画
-      drawShapes(e.ctx, shapes, e.view, { snapFocusShapeIds: angleFitTargetShapeIds });
+      drawShapes(e.ctx, shapes, e.view, {
+        snapFocusShapeIds: angleFitTargetShapeIds,
+        snapTargetShapeIds: snapTargetShapeIds,
+      });
       // バウンディングボックスを描画
       if (shouldDrawBoundingBox) {
         for (const shape of selectedShapes) {
@@ -96,8 +108,16 @@ export const App = () => {
       angleFitTargetShapeIds,
       shouldDrawBoundingBox,
       currentDragAction,
+      snapTargetShapeIds,
     ]
   );
+
+  // ドラッグ開始時に使用するスナップモード
+  const handleDragShapeStart = (viewPoint: Point) => {
+    // スナップオプションに基づいてスナップモードを決定
+    // snapToAll ? 'all' : 'selected' を第2引数として渡す
+    dragShapeStart(viewPoint, snapToAll ? 'all' : 'selected');
+  };
 
   return (
     <>
@@ -114,7 +134,7 @@ export const App = () => {
               addStrokePoint(e.pointCanvas);
             }
             if (currentTool === 'select') {
-              dragShapeStart(e.pointView);
+              handleDragShapeStart(e.pointView);
             }
             if (currentTool === 'create-rect' || currentTool === 'create-oval') {
               createShapeStart({ viewPoint: e.pointView, tool: currentTool });
@@ -153,9 +173,14 @@ export const App = () => {
           }}
           onMultiTouchStart={(e) => {
             console.log('マルチタッチ開始', e.pointView);
+            // マルチタッチでスナップ対象を切り替え
+            toggleSnapTargetOnMultiTouch(e);
           }}
         />
         <Toolbar currentTool={currentTool} onToolChange={changeTool} onClickClear={clearStrokes} />
+        {currentTool === 'select' && (
+          <SnapOptionToolbar snapToAll={snapToAll} onSnapToAllChange={setSnapToAll} />
+        )}
       </div>
     </>
   );

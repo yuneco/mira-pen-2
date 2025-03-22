@@ -88,14 +88,11 @@ export const Canvas: FC<CanvasProps> = ({
       }
 
       // 複数タッチ（2本目以降のタッチ）が開始された場合
-      if (touchPoints.length >= 2 && gesture.type === 'singleTouch') {
-        const center = {
-          x: (touchPoints[0].x + touchPoints[1].x) / 2,
-          y: (touchPoints[0].y + touchPoints[1].y) / 2,
-        };
+      const lastTouch = touchPoints.at(-1);
+      if (lastTouch && touchPoints.length >= 2 && gesture.type === 'singleTouch') {
         onMultiTouchStart?.({
-          pointView: center,
-          pointCanvas: viewToCanvas(center, view),
+          pointView: { x: lastTouch.x, y: lastTouch.y },
+          pointCanvas: viewToCanvas({ x: lastTouch.x, y: lastTouch.y }, view),
           event: e,
         });
       }
