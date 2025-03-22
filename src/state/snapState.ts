@@ -14,6 +14,19 @@ const allSnapsBaseAtom = atom<Snap[]>([]);
  */
 export const allSnapsAtom = atom((get) => get(allSnapsBaseAtom));
 
+/**
+ * スナップの対象となる図形のID
+ */
+export const snapTargetShapeIdsAtom = atom<string[]>([]);
+
+/**
+ * スナップの対象となる図形
+ */
+export const snapTargetShapesAtom = atom((get) => {
+  const shapeIds = get(snapTargetShapeIdsAtom);
+  return get(allShapesAtom).filter((shape) => shapeIds.includes(shape.id));
+});
+
 const snapToKey = (snap: Snap): string => {
   switch (snap.kind) {
     case 'point':
@@ -129,11 +142,45 @@ const createCornerSnaps = (shape: Shape): Snap[] => {
 
 /**
  * 図形移動用のSnapを生成します。
+ * @param initialTarget スナップ対象の図形の選択方法
+ * - "all": 全ての図形をスナップ対象とする（従来の動作）
+ * - "selected": 選択されている図形のみをスナップ対象とする
  */
-export const initSnapForMoveAction = atom(undefined, (get, set) => {
+export const initSnapForMoveAction = atom(
+  undefined,
+  (get, set, initialTarget: 'selected' | 'all' = 'all') => {
+    const selectedShape = get(selectedShapeAtom).at(0);
+    const shapes = get(allShapesAtom);
+
+    // スナップ対象となる図形のIDを設定
+    if (initialTarget === 'all') {
+      // 全ての図形をスナップ対象とする
+      set(
+        snapTargetShapeIdsAtom,
+        shapes.map((shape) => shape.id)
+      );
+    } else {
+      // 選択されている図形のみをスナップ対象とする
+      if (selectedShape) {
+        set(snapTargetShapeIdsAtom, [selectedShape.id]);
+      } else {
+        set(snapTargetShapeIdsAtom, []);
+      }
+    }
+
+    // スナップを更新
+    set(updateSnapsAction);
+  }
+);
+
+/**
+ * スナップを現在のターゲットで更新します。
+ */
+const updateSnapsAction = atom(undefined, (get, set) => {
+  // スナップ対象の図形を取得
   const selectedShape = get(selectedShapeAtom).at(0);
-  const shapes = get(allShapesAtom);
-  const nonSelectedShapes = shapes.filter((shape) => shape.id !== selectedShape?.id);
+  const targetShapes = get(snapTargetShapesAtom);
+  const nonSelectedTargetShapes = targetShapes.filter((shape) => shape.id !== selectedShape?.id);
 
   const snaps: Snap[] = [];
   const isRotated = (shape: Shape) => shape.rect.angle % 90 !== 0;
@@ -146,7 +193,7 @@ export const initSnapForMoveAction = atom(undefined, (get, set) => {
   }
 
   // 選択されていない図形のSnapを生成
-  for (const shape of nonSelectedShapes) {
+  for (const shape of nonSelectedTargetShapes) {
     const rotated = isRotated(shape);
     const sameAngle =
       selectedShape &&
@@ -163,6 +210,24 @@ export const initSnapForMoveAction = atom(undefined, (get, set) => {
 
   // 重複を排除して保存
   set(allSnapsBaseAtom, uniqueSnaps(snaps));
+});
+
+/**
+ * スナップの対象となる図形を追加または削除します。
+ * @param shapeId 図形のID
+ */
+export const toggleSnapTargetShapeIdAction = atom(undefined, (get, set, shapeId: string) => {
+  const shapeIds = get(snapTargetShapeIdsAtom);
+  if (shapeIds.includes(shapeId)) {
+    set(
+      snapTargetShapeIdsAtom,
+      shapeIds.filter((id) => id !== shapeId)
+    );
+  } else {
+    set(snapTargetShapeIdsAtom, [...shapeIds, shapeId]);
+  }
+  // スナップを再生成
+  set(updateSnapsAction);
 });
 
 export const clearSnapAction = atom(undefined, (_get, set) => {

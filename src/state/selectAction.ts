@@ -151,7 +151,7 @@ export const dragShapeStartAction = atom(undefined, (get, set, viewPoint: Point)
         set(initAnglesToFitAction);
       } else {
         // 回転でない場合（移動またはリサイズの場合）は移動用のスナップを生成
-        set(initSnapForMoveAction);
+        set(initSnapForMoveAction, 'all');
       }
       return;
     }
@@ -182,7 +182,7 @@ export const dragShapeStartAction = atom(undefined, (get, set, viewPoint: Point)
     draggingHandle: 'body',
   });
   // 移動用のスナップを生成
-  set(initSnapForMoveAction);
+  set(initSnapForMoveAction, 'all');
 });
 
 /**

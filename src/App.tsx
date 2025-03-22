@@ -151,6 +151,9 @@ export const App = () => {
             // ストローク中にジェスチャー操作が開始されたらキャンセル
             cancelStroke();
           }}
+          onMultiTouchStart={(e) => {
+            console.log('マルチタッチ開始', e.pointView);
+          }}
         />
         <Toolbar currentTool={currentTool} onToolChange={changeTool} onClickClear={clearStrokes} />
       </div>

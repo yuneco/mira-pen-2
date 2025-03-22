@@ -21,6 +21,7 @@ export const Canvas: FC<CanvasProps> = ({
   onTouchMove,
   onTouchEnd,
   onGuestureStart,
+  onMultiTouchStart,
 }) => {
   useAtomValue(redrawTrigger);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -86,6 +87,19 @@ export const Canvas: FC<CanvasProps> = ({
         });
       }
 
+      // 複数タッチ（2本目以降のタッチ）が開始された場合
+      if (touchPoints.length >= 2 && gesture.type === 'singleTouch') {
+        const center = {
+          x: (touchPoints[0].x + touchPoints[1].x) / 2,
+          y: (touchPoints[0].y + touchPoints[1].y) / 2,
+        };
+        onMultiTouchStart?.({
+          pointView: center,
+          pointCanvas: viewToCanvas(center, view),
+          event: e,
+        });
+      }
+
       if (enableGuesture === true || enableGuesture === 'multi-touch-only') {
         setGesture(() => {
           // 2点のタッチが検出された場合
@@ -136,7 +150,7 @@ export const Canvas: FC<CanvasProps> = ({
         }
       }
     },
-    [view, onTouchStart, enableGuesture, onGuestureStart]
+    [view, onTouchStart, enableGuesture, onGuestureStart, onMultiTouchStart, gesture]
   );
 
   // タッチ移動時の処理
